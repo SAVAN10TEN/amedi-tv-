@@ -25,6 +25,67 @@ let allChannelsServer = [...CHANNELS, ...customChannels];
 let channelsVersion = Date.now().toString();
 
 const DYNAMICALLY_AUTHORIZED_HOSTS = new Set<string>();
+const CLOUDFLARE_BACKED_HOSTS = new Set<string>();
+const NON_CLOUDFLARE_HOSTS = new Set<string>();
+
+async function isHostCloudflareBacked(hostname: string, targetStreamUrl: string): Promise<boolean> {
+  if (CLOUDFLARE_BACKED_HOSTS.has(hostname)) return true;
+  if (NON_CLOUDFLARE_HOSTS.has(hostname)) return false;
+
+  const cfSuffixes = [
+    "cloudflarestream.com",
+    "videodelivery.net",
+    "cloudflare.com",
+    "workers.dev",
+    "pages.dev",
+    "r2.dev",
+    "cloudflarepages.com"
+  ];
+  if (cfSuffixes.some(s => hostname === s || hostname.endsWith(`.${s}`))) {
+    CLOUDFLARE_BACKED_HOSTS.add(hostname);
+    return true;
+  }
+
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 1200);
+    const probeHeaders = {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36'
+    };
+    
+    const probeRes = await fetch(targetStreamUrl, {
+      method: "HEAD",
+      headers: probeHeaders,
+      signal: controller.signal
+    }).catch(async () => {
+      const getController = new AbortController();
+      const getTimeoutId = setTimeout(() => getController.abort(), 1200);
+      const r = await fetch(targetStreamUrl, {
+        method: "GET",
+        headers: { ...probeHeaders, 'Range': 'bytes=0-0' },
+        signal: getController.signal
+      });
+      clearTimeout(getTimeoutId);
+      return r;
+    });
+    
+    clearTimeout(timeoutId);
+    if (probeRes) {
+      const serverHeader = probeRes.headers.get("server") || "";
+      const cfRayHeader = probeRes.headers.get("cf-ray");
+      const isCf = serverHeader.toLowerCase().includes("cloudflare") || !!cfRayHeader;
+      if (isCf) {
+        CLOUDFLARE_BACKED_HOSTS.add(hostname);
+        return true;
+      }
+    }
+  } catch (err) {
+    // Ignore error
+  }
+  
+  NON_CLOUDFLARE_HOSTS.add(hostname);
+  return false;
+}
 
 // Resolves karwan.tv webpage URLs to their dynamic HLS tokenized stream manifests dynamically at request time.
 async function resolveKarwanStream(webpageUrl: string): Promise<string> {
@@ -563,51 +624,37 @@ async function startServer() {
       ];
 
       const hostname = urlObj.hostname.toLowerCase();
+      
+      // Automatically probe if the host is backed/protected by Cloudflare to optimize headers
+      const isCfDomain = await isHostCloudflareBacked(hostname, targetStreamUrl);
+
       let isDomainAllowed = ALLOWED_STREAM_DOMAINS.some(allowed => {
         return hostname === allowed || hostname.endsWith(`.${allowed}`);
       }) || DYNAMICALLY_AUTHORIZED_HOSTS.has(hostname) || [...DYNAMICALLY_AUTHORIZED_HOSTS].some(auth => {
         return hostname.endsWith(`.${auth}`);
       });
 
-      // Dynamic Cloudflare backend probing bypass: if the target is Cloudflare-backed, we authorize it.
-      let isCfBackend = false;
+      // Support ALL stream channels: if Cloudflare backend is auto-detected, authorize dynamically
+      if (isCfDomain && !isDomainAllowed) {
+        console.log(`[Proxy Auto-Detect] Dynamically authorized Cloudflare-backed host: ${hostname}`);
+        isDomainAllowed = true;
+        DYNAMICALLY_AUTHORIZED_HOSTS.add(hostname);
+      }
+
+      // Safe dynamic authorization for any direct stream-like URLs (m3u8, ts, playlist, etc.) to support all channels
       if (!isDomainAllowed) {
-        try {
-          const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 1500);
-          const probeHeaders = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36'
-          };
-          
-          const probeRes = await fetch(targetStreamUrl, {
-            method: "HEAD",
-            headers: probeHeaders,
-            signal: controller.signal
-          }).catch(async () => {
-            const getController = new AbortController();
-            const getTimeoutId = setTimeout(() => getController.abort(), 1500);
-            const r = await fetch(targetStreamUrl, {
-              method: "GET",
-              headers: { ...probeHeaders, 'Range': 'bytes=0-0' },
-              signal: getController.signal
-            });
-            clearTimeout(getTimeoutId);
-            return r;
-          });
-          
-          clearTimeout(timeoutId);
-          if (probeRes) {
-            const serverHeader = probeRes.headers.get("server") || "";
-            const cfRayHeader = probeRes.headers.get("cf-ray");
-            isCfBackend = serverHeader.toLowerCase().includes("cloudflare") || !!cfRayHeader;
-            if (isCfBackend) {
-              console.log(`[Proxy Auto-Detect] Dynamically authorized Cloudflare-backed host: ${hostname}`);
-              isDomainAllowed = true;
-              DYNAMICALLY_AUTHORIZED_HOSTS.add(hostname);
-            }
-          }
-        } catch (err) {
-          // Dynamic probe failed, fallback to standard whitelist & parent parameters
+        const lowerPath = urlObj.pathname.toLowerCase();
+        if (
+          lowerPath.endsWith(".m3u8") || 
+          lowerPath.endsWith(".ts") || 
+          urlObj.search.toLowerCase().includes(".m3u8") || 
+          targetStreamUrl.toLowerCase().includes("playlist") || 
+          targetStreamUrl.toLowerCase().includes("master") || 
+          targetStreamUrl.toLowerCase().includes("m3u8")
+        ) {
+          console.log(`[Proxy Auto-Authorize] Dynamically authorized HLS/media url: ${hostname}`);
+          isDomainAllowed = true;
+          DYNAMICALLY_AUTHORIZED_HOSTS.add(hostname);
         }
       }
 
@@ -654,17 +701,6 @@ async function startServer() {
        while (attempts < maxAttempts) {
         attempts++;
         try {
-          const isCfDomain = hostname.endsWith("cloudflarestream.com") || 
-                             hostname.endsWith("videodelivery.net") || 
-                             hostname.endsWith("cloudflare.com") || 
-                             hostname.endsWith("workers.dev") || 
-                             hostname.endsWith("pages.dev") || 
-                             hostname.endsWith("r2.dev") ||
-                             hostname.endsWith("cloudflarepages.com") ||
-                             isCfBackend ||
-                             DYNAMICALLY_AUTHORIZED_HOSTS.has(hostname) ||
-                             [...DYNAMICALLY_AUTHORIZED_HOSTS].some(auth => hostname.endsWith(`.${auth}`));
-
           const proxyHeaders: Record<string, string> = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
             'Accept': '*/*',
