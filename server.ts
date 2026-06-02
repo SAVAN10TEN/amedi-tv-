@@ -436,6 +436,19 @@ async function startServer() {
   // Support parsing JSON request bodies
   app.use(express.json());
 
+  // Comprehensive CORS and Preflight (OPTIONS) middleware for all /api endpoints
+  app.use("/api", (req, res, next) => {
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS, PUT, DELETE, HEAD");
+    res.setHeader("Access-Control-Allow-Headers", "Range, Content-Type, Authorization, X-Requested-With, Cache-Control, Accept, Origin, Referer, User-Agent, X-Forwarded-For, True-Client-IP");
+    res.setHeader("Access-Control-Expose-Headers", "Content-Length, Content-Range, Accept-Ranges, Content-Type");
+    
+    if (req.method === "OPTIONS") {
+      return res.sendStatus(204);
+    }
+    next();
+  });
+
   // Store connected SSE clients
   let sseClients: express.Response[] = [];
 
@@ -627,11 +640,11 @@ async function startServer() {
       }
     }
 
-    // Direct streamlock bypass: streamlock domains are best played directly in the browser.
-    // Fetching them on cloud/server-side often results in connect timeouts due to firewalls or IP restrictions,
-    // while the client browser's residential connection works perfectly.
-    if (targetStreamUrl.includes("streamlock.net")) {
-      console.log(`[Proxy Bypassed] Streamlock URL detected. Gracefully redirecting browser client to: ${targetStreamUrl}`);
+    // Direct streamlock or non-standard port (e.g. :444) bypass:
+    // Fetching them on cloud/server-side often results in connect timeouts due to cloud outbound firewalls or IP/port blocks (like port 444),
+    // while the client browser's residential connection connects and plays them perfectly with direct CORS response.
+    if (targetStreamUrl.includes("streamlock.net") || targetStreamUrl.includes(":444")) {
+      console.log(`[Proxy Bypassed] Streamlock or custom port (:444) URL detected. Gracefully redirecting browser client to: ${targetStreamUrl}`);
       return res.redirect(targetStreamUrl);
     }
 
