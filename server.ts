@@ -27,6 +27,8 @@ let channelsVersion = Date.now().toString();
 const DYNAMICALLY_AUTHORIZED_HOSTS = new Set<string>();
 const CLOUDFLARE_BACKED_HOSTS = new Set<string>();
 const NON_CLOUDFLARE_HOSTS = new Set<string>();
+const VERCEL_BACKED_HOSTS = new Set<string>();
+const NON_VERCEL_HOSTS = new Set<string>();
 
 async function isHostCloudflareBacked(hostname: string, targetStreamUrl: string): Promise<boolean> {
   if (CLOUDFLARE_BACKED_HOSTS.has(hostname)) return true;
@@ -84,6 +86,61 @@ async function isHostCloudflareBacked(hostname: string, targetStreamUrl: string)
   }
   
   NON_CLOUDFLARE_HOSTS.add(hostname);
+  return false;
+}
+
+async function isHostVercelBacked(hostname: string, targetStreamUrl: string): Promise<boolean> {
+  if (VERCEL_BACKED_HOSTS.has(hostname)) return true;
+  if (NON_VERCEL_HOSTS.has(hostname)) return false;
+
+  const vercelSuffixes = [
+    "vercel.app",
+    "vercel.sh"
+  ];
+  if (vercelSuffixes.some(s => hostname === s || hostname.endsWith(`.${s}`))) {
+    VERCEL_BACKED_HOSTS.add(hostname);
+    return true;
+  }
+
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 1200);
+    const probeHeaders = {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36'
+    };
+    
+    const probeRes = await fetch(targetStreamUrl, {
+      method: "HEAD",
+      headers: probeHeaders,
+      signal: controller.signal
+    }).catch(async () => {
+      const getController = new AbortController();
+      const getTimeoutId = setTimeout(() => getController.abort(), 1200);
+      const r = await fetch(targetStreamUrl, {
+        method: "GET",
+        headers: { ...probeHeaders, 'Range': 'bytes=0-0' },
+        signal: getController.signal
+      });
+      clearTimeout(getTimeoutId);
+      return r;
+    });
+    
+    clearTimeout(timeoutId);
+    if (probeRes) {
+      const serverHeader = probeRes.headers.get("server") || "";
+      const xVercelId = probeRes.headers.get("x-vercel-id");
+      const xVercelCache = probeRes.headers.get("x-vercel-cache");
+      const isVercel = serverHeader.toLowerCase().includes("vercel") || !!xVercelId || !!xVercelCache;
+      if (isVercel) {
+        VERCEL_BACKED_HOSTS.add(hostname);
+        return true;
+      }
+    }
+  } catch (err) {
+    // Ignore error
+  }
+  
+  NON_VERCEL_HOSTS.add(hostname);
   return false;
 }
 
@@ -620,13 +677,16 @@ async function startServer() {
         "cloudflarepages.com",
         "r2.dev",
         "r2.cloudflarestorage.com",
-        "cloudflare-ipfs.com"
+        "cloudflare-ipfs.com",
+        "vercel.app",
+        "vercel.sh"
       ];
 
       const hostname = urlObj.hostname.toLowerCase();
       
-      // Automatically probe if the host is backed/protected by Cloudflare to optimize headers
+      // Automatically probe if the host is backed/protected by Cloudflare or Vercel to optimize headers
       const isCfDomain = await isHostCloudflareBacked(hostname, targetStreamUrl);
+      const isVercelDomain = await isHostVercelBacked(hostname, targetStreamUrl);
 
       let isDomainAllowed = ALLOWED_STREAM_DOMAINS.some(allowed => {
         return hostname === allowed || hostname.endsWith(`.${allowed}`);
@@ -637,6 +697,13 @@ async function startServer() {
       // Support ALL stream channels: if Cloudflare backend is auto-detected, authorize dynamically
       if (isCfDomain && !isDomainAllowed) {
         console.log(`[Proxy Auto-Detect] Dynamically authorized Cloudflare-backed host: ${hostname}`);
+        isDomainAllowed = true;
+        DYNAMICALLY_AUTHORIZED_HOSTS.add(hostname);
+      }
+
+      // Support ALL vercel channels: if Vercel backend is auto-detected, authorize dynamically
+      if (isVercelDomain && !isDomainAllowed) {
+        console.log(`[Proxy Auto-Detect] Dynamically authorized Vercel-backed host: ${hostname}`);
         isDomainAllowed = true;
         DYNAMICALLY_AUTHORIZED_HOSTS.add(hostname);
       }
@@ -707,8 +774,8 @@ async function startServer() {
             'Accept-Language': 'en-US,en;q=0.9',
           };
 
-          // Do NOT send manufactured Referer/Origin headers to Cloudflare domains to avoid being blocked by integrity filters
-          if (!isCfDomain) {
+          // Do NOT send manufactured Referer/Origin headers to Cloudflare/Vercel domains to avoid being blocked by integrity filters
+          if (!isCfDomain && !isVercelDomain) {
             proxyHeaders['Referer'] = `${urlObj.protocol}//${urlObj.hostname}/`;
             proxyHeaders['Origin'] = `${urlObj.protocol}//${urlObj.hostname}/`;
           }
@@ -718,10 +785,10 @@ async function startServer() {
             proxyHeaders['Range'] = req.headers.range as string;
           }
 
-          // Seamless Cloudflare-mediated stream proxy support: forward viewer's actual IP to the target media server
-          // Note: CF-Connecting-IP is intentionally omitted as streaming servers behind Cloudflare reject requests containing it.
-          // For true Cloudflare-hosted endpoints (Workers, Pages, Streams), omitting IP headers avoids triggering spoofing alerts.
-          if (clientIp && !isCfDomain) {
+          // Seamless Cloudflare/Vercel-mediated stream proxy support: forward viewer's actual IP to the target media server
+          // Note: CF-Connecting-IP is intentionally omitted as streaming servers behind CDN layers reject requests containing it.
+          // For CDN-hosted endpoints (Cloudflare, Vercel), omitting IP and spoofed headers avoids triggering edge security bans.
+          if (clientIp && !isCfDomain && !isVercelDomain) {
             proxyHeaders['X-Forwarded-For'] = clientIp;
             proxyHeaders['True-Client-IP'] = clientIp;
           }

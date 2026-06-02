@@ -61,7 +61,7 @@ const isHlsUrl = (url: string) => {
   if (lowerUrl.includes('master')) return true;
   if (lowerUrl.includes('chunks.m3u8')) return true;
   if (lowerUrl.includes('karwan.tv')) return true;
-  if (lowerUrl.includes('workers.dev') || lowerUrl.includes('pages.dev') || lowerUrl.includes('cloudflare')) return true;
+  if (lowerUrl.includes('workers.dev') || lowerUrl.includes('pages.dev') || lowerUrl.includes('cloudflare') || lowerUrl.includes('vercel.app') || lowerUrl.includes('vercel')) return true;
 
   try {
     const urlObj = new URL(url);
