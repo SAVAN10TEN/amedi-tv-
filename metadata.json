@@ -1,0 +1,8 @@
+{
+  "name": "Remix: Amedi TV ",
+  "description": "A comprehensive TV channel listing and streaming discovery app with Kurdish, Arabic, and international channels.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
