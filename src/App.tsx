@@ -87,6 +87,9 @@ const PlayerView = ({ channel, onBack, onSelectChannel, t, allChannels }: { chan
 
   const resolvedStreamUrl = useMemo(() => {
     if (!channel.streamUrl) return '';
+    if (channel.streamUrl.startsWith('https://ameditv.kurdiish.workers.dev')) {
+      return channel.streamUrl;
+    }
     if (channel.streamUrl.startsWith('/') || channel.streamUrl.startsWith('http://localhost') || channel.streamUrl.startsWith('https://localhost')) {
       return channel.streamUrl;
     }
