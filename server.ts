@@ -549,13 +549,35 @@ async function startServer() {
         "alkassdigital.net",
         "87.98.145.107",
         "154.58.202.18",
-        "workers.dev"
+        "workers.dev",
+        "pages.dev"
       ];
 
       const hostname = urlObj.hostname.toLowerCase();
-      const isDomainAllowed = ALLOWED_STREAM_DOMAINS.some(allowed => {
+      let isDomainAllowed = ALLOWED_STREAM_DOMAINS.some(allowed => {
         return hostname === allowed || hostname.endsWith(`.${allowed}`);
       });
+
+      // Authorization bypass for child stream segments/playlists if their parent domain is whitelisted
+      const parentParam = req.query.parent as string;
+      if (!isDomainAllowed && parentParam) {
+        try {
+          const parentHost = parentParam.includes("://") 
+            ? new URL(parentParam).hostname.toLowerCase() 
+            : new URL(`https://${parentParam}`).hostname.toLowerCase();
+          
+          const isParentAllowed = ALLOWED_STREAM_DOMAINS.some(allowed => {
+            return parentHost === allowed || parentHost.endsWith(`.${allowed}`);
+          });
+
+          if (isParentAllowed) {
+            console.log(`[Proxy Whitelist Bypass] Authorizing segment segment/resource ${hostname} through trusted parent ${parentHost}`);
+            isDomainAllowed = true;
+          }
+        } catch (e) {
+          // Ignore parse errors on malformed parent param
+        }
+      }
 
       if (!isDomainAllowed) {
         console.warn(`[Proxy Block] Blocked response proxy for unauthorized host: ${urlObj.hostname}`);
@@ -655,7 +677,8 @@ async function startServer() {
             targetUrl += urlObj.search;
           }
 
-          return `/api/proxy?url=${encodeURIComponent(targetUrl)}`;
+          const parentHost = urlObj.hostname;
+          return `/api/proxy?url=${encodeURIComponent(targetUrl)}&parent=${encodeURIComponent(parentHost)}`;
         };
 
         // 1. Rewrite plain URLs (lines not starting with #)
@@ -695,7 +718,8 @@ async function startServer() {
               targetUrl += urlObj.search;
             }
 
-            return `/api/proxy?url=${encodeURIComponent(targetUrl)}`;
+            const parentHost = urlObj.hostname;
+            return `/api/proxy?url=${encodeURIComponent(targetUrl)}&parent=${encodeURIComponent(parentHost)}`;
           };
 
           let rewrittenManifest = manifest.replace(/^(?!#|\s)(.*)$/gm, (match) => toProxyUrl(match));
