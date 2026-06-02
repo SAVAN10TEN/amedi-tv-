@@ -24,6 +24,8 @@ try {
 let allChannelsServer = [...CHANNELS, ...customChannels];
 let channelsVersion = Date.now().toString();
 
+const DYNAMICALLY_AUTHORIZED_HOSTS = new Set<string>();
+
 // Resolves karwan.tv webpage URLs to their dynamic HLS tokenized stream manifests dynamically at request time.
 async function resolveKarwanStream(webpageUrl: string): Promise<string> {
   const baseHeaders = {
@@ -563,9 +565,12 @@ async function startServer() {
       const hostname = urlObj.hostname.toLowerCase();
       let isDomainAllowed = ALLOWED_STREAM_DOMAINS.some(allowed => {
         return hostname === allowed || hostname.endsWith(`.${allowed}`);
+      }) || DYNAMICALLY_AUTHORIZED_HOSTS.has(hostname) || [...DYNAMICALLY_AUTHORIZED_HOSTS].some(auth => {
+        return hostname.endsWith(`.${auth}`);
       });
 
       // Dynamic Cloudflare backend probing bypass: if the target is Cloudflare-backed, we authorize it.
+      let isCfBackend = false;
       if (!isDomainAllowed) {
         try {
           const controller = new AbortController();
@@ -594,10 +599,11 @@ async function startServer() {
           if (probeRes) {
             const serverHeader = probeRes.headers.get("server") || "";
             const cfRayHeader = probeRes.headers.get("cf-ray");
-            const isCfBackend = serverHeader.toLowerCase().includes("cloudflare") || !!cfRayHeader;
+            isCfBackend = serverHeader.toLowerCase().includes("cloudflare") || !!cfRayHeader;
             if (isCfBackend) {
               console.log(`[Proxy Auto-Detect] Dynamically authorized Cloudflare-backed host: ${hostname}`);
               isDomainAllowed = true;
+              DYNAMICALLY_AUTHORIZED_HOSTS.add(hostname);
             }
           }
         } catch (err) {
@@ -605,7 +611,7 @@ async function startServer() {
         }
       }
 
-      // Authorization bypass for child stream segments/playlists if their parent domain is whitelisted
+      // Authorization bypass for child stream segments/playlists if their parent domain is whitelisted or dynamically authorized
       const parentParam = req.query.parent as string;
       if (!isDomainAllowed && parentParam) {
         try {
@@ -615,6 +621,8 @@ async function startServer() {
           
           const isParentAllowed = ALLOWED_STREAM_DOMAINS.some(allowed => {
             return parentHost === allowed || parentHost.endsWith(`.${allowed}`);
+          }) || DYNAMICALLY_AUTHORIZED_HOSTS.has(parentHost) || [...DYNAMICALLY_AUTHORIZED_HOSTS].some(auth => {
+            return parentHost.endsWith(`.${auth}`);
           });
 
           if (isParentAllowed) {
@@ -643,7 +651,7 @@ async function startServer() {
       const isSegment = targetStreamUrl.toLowerCase().endsWith('.ts') || targetStreamUrl.includes('/tracks-') && targetStreamUrl.includes('.ts');
       const maxAttempts = isSegment ? 2 : 1;
 
-      while (attempts < maxAttempts) {
+       while (attempts < maxAttempts) {
         attempts++;
         try {
           const isCfDomain = hostname.endsWith("cloudflarestream.com") || 
@@ -652,7 +660,10 @@ async function startServer() {
                              hostname.endsWith("workers.dev") || 
                              hostname.endsWith("pages.dev") || 
                              hostname.endsWith("r2.dev") ||
-                             hostname.endsWith("cloudflarepages.com");
+                             hostname.endsWith("cloudflarepages.com") ||
+                             isCfBackend ||
+                             DYNAMICALLY_AUTHORIZED_HOSTS.has(hostname) ||
+                             [...DYNAMICALLY_AUTHORIZED_HOSTS].some(auth => hostname.endsWith(`.${auth}`));
 
           const proxyHeaders: Record<string, string> = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
@@ -666,9 +677,15 @@ async function startServer() {
             proxyHeaders['Origin'] = `${urlObj.protocol}//${urlObj.hostname}/`;
           }
 
+          // Forward client's range request header if it exists (very important for some seekable chunked streams & Cloudflare Stream)
+          if (req.headers.range) {
+            proxyHeaders['Range'] = req.headers.range as string;
+          }
+
           // Seamless Cloudflare-mediated stream proxy support: forward viewer's actual IP to the target media server
           // Note: CF-Connecting-IP is intentionally omitted as streaming servers behind Cloudflare reject requests containing it.
-          if (clientIp) {
+          // For true Cloudflare-hosted endpoints (Workers, Pages, Streams), omitting IP headers avoids triggering spoofing alerts.
+          if (clientIp && !isCfDomain) {
             proxyHeaders['X-Forwarded-For'] = clientIp;
             proxyHeaders['True-Client-IP'] = clientIp;
           }
@@ -704,6 +721,13 @@ async function startServer() {
         } else {
           console.error(`Proxy fetch failed for ${targetStreamUrl}: ${response?.status || 'Network Error'} ${response?.statusText || ''}`);
         }
+
+        // Handle active redirected fallback: if the manifest fetch failed with non-2xx (or blocking 403), redirect directly
+        if (!isSegment && targetStreamUrl.startsWith("http")) {
+          console.warn(`[Proxy Fallback] Redirecting client directly to manifest due to status ${response?.status}: ${targetStreamUrl}`);
+          return res.redirect(targetStreamUrl);
+        }
+
         return res.status(response?.status || 502).send(`Fetch failed: ${response?.statusText || 'Network Error'}`);
       }
 
@@ -793,8 +817,18 @@ async function startServer() {
           return res.send(rewrittenManifest);
         }
 
+        if (response.headers.get("content-range")) {
+          res.set("Content-Range", response.headers.get("content-range")!);
+        }
+        if (response.headers.get("accept-ranges")) {
+          res.set("Accept-Ranges", response.headers.get("accept-ranges")!);
+        }
+        if (response.headers.get("content-length")) {
+          res.set("Content-Length", response.headers.get("content-length")!);
+        }
         res.set("Content-Type", contentType || "application/octet-stream");
         res.set("Access-Control-Allow-Origin", "*");
+        res.status(response.status);
         return res.send(Buffer.from(buffer));
       }
     } catch (error: any) {
