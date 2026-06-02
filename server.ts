@@ -550,7 +550,11 @@ async function startServer() {
         "87.98.145.107",
         "154.58.202.18",
         "workers.dev",
-        "pages.dev"
+        "pages.dev",
+        "cloudflarestream.com",
+        "videodelivery.net",
+        "cloudflare.com",
+        "cloudflarepages.com"
       ];
 
       const hostname = urlObj.hostname.toLowerCase();
