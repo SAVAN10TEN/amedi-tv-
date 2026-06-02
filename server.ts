@@ -554,13 +554,56 @@ async function startServer() {
         "cloudflarestream.com",
         "videodelivery.net",
         "cloudflare.com",
-        "cloudflarepages.com"
+        "cloudflarepages.com",
+        "r2.dev",
+        "r2.cloudflarestorage.com",
+        "cloudflare-ipfs.com"
       ];
 
       const hostname = urlObj.hostname.toLowerCase();
       let isDomainAllowed = ALLOWED_STREAM_DOMAINS.some(allowed => {
         return hostname === allowed || hostname.endsWith(`.${allowed}`);
       });
+
+      // Dynamic Cloudflare backend probing bypass: if the target is Cloudflare-backed, we authorize it.
+      if (!isDomainAllowed) {
+        try {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 1500);
+          const probeHeaders = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36'
+          };
+          
+          const probeRes = await fetch(targetStreamUrl, {
+            method: "HEAD",
+            headers: probeHeaders,
+            signal: controller.signal
+          }).catch(async () => {
+            const getController = new AbortController();
+            const getTimeoutId = setTimeout(() => getController.abort(), 1500);
+            const r = await fetch(targetStreamUrl, {
+              method: "GET",
+              headers: { ...probeHeaders, 'Range': 'bytes=0-0' },
+              signal: getController.signal
+            });
+            clearTimeout(getTimeoutId);
+            return r;
+          });
+          
+          clearTimeout(timeoutId);
+          if (probeRes) {
+            const serverHeader = probeRes.headers.get("server") || "";
+            const cfRayHeader = probeRes.headers.get("cf-ray");
+            const isCfBackend = serverHeader.toLowerCase().includes("cloudflare") || !!cfRayHeader;
+            if (isCfBackend) {
+              console.log(`[Proxy Auto-Detect] Dynamically authorized Cloudflare-backed host: ${hostname}`);
+              isDomainAllowed = true;
+            }
+          }
+        } catch (err) {
+          // Dynamic probe failed, fallback to standard whitelist & parent parameters
+        }
+      }
 
       // Authorization bypass for child stream segments/playlists if their parent domain is whitelisted
       const parentParam = req.query.parent as string;
@@ -603,13 +646,25 @@ async function startServer() {
       while (attempts < maxAttempts) {
         attempts++;
         try {
+          const isCfDomain = hostname.endsWith("cloudflarestream.com") || 
+                             hostname.endsWith("videodelivery.net") || 
+                             hostname.endsWith("cloudflare.com") || 
+                             hostname.endsWith("workers.dev") || 
+                             hostname.endsWith("pages.dev") || 
+                             hostname.endsWith("r2.dev") ||
+                             hostname.endsWith("cloudflarepages.com");
+
           const proxyHeaders: Record<string, string> = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
-            'Referer': `${urlObj.protocol}//${urlObj.hostname}/`,
-            'Origin': `${urlObj.protocol}//${urlObj.hostname}/`,
             'Accept': '*/*',
             'Accept-Language': 'en-US,en;q=0.9',
           };
+
+          // Do NOT send manufactured Referer/Origin headers to Cloudflare domains to avoid being blocked by integrity filters
+          if (!isCfDomain) {
+            proxyHeaders['Referer'] = `${urlObj.protocol}//${urlObj.hostname}/`;
+            proxyHeaders['Origin'] = `${urlObj.protocol}//${urlObj.hostname}/`;
+          }
 
           // Seamless Cloudflare-mediated stream proxy support: forward viewer's actual IP to the target media server
           // Note: CF-Connecting-IP is intentionally omitted as streaming servers behind Cloudflare reject requests containing it.
@@ -660,8 +715,9 @@ async function startServer() {
 
       if (isM3U8Content) {
         let manifest = await response.text();
-        const urlObj = new URL(targetStreamUrl);
-        const baseDir = targetStreamUrl.substring(0, targetStreamUrl.lastIndexOf("/") + 1);
+        const finalUrl = response.url || targetStreamUrl;
+        const urlObj = new URL(finalUrl);
+        const baseDir = finalUrl.substring(0, finalUrl.lastIndexOf("/") + 1);
 
         // Utility to convert relative URL to absolute and wrapped in proxy
         const toProxyUrl = (relUrl: string) => {
@@ -703,8 +759,9 @@ async function startServer() {
         
         if (firstBytes === "#EXTM3U") {
           let manifest = Buffer.from(buffer).toString();
-          const urlObj = new URL(targetStreamUrl);
-          const baseDir = targetStreamUrl.substring(0, targetStreamUrl.lastIndexOf("/") + 1);
+          const finalUrl = response.url || targetStreamUrl;
+          const urlObj = new URL(finalUrl);
+          const baseDir = finalUrl.substring(0, finalUrl.lastIndexOf("/") + 1);
 
           const toProxyUrl = (relUrl: string) => {
             let targetUrl = relUrl.trim();

@@ -85,6 +85,14 @@ const PlayerView = ({ channel, onBack, onSelectChannel, t, allChannels }: { chan
   const [canCast, setCanCast] = useState(false);
   const [tvFocusedChId, setTvFocusedChId] = useState<string | null>(channel.id);
 
+  const resolvedStreamUrl = useMemo(() => {
+    if (!channel.streamUrl) return '';
+    if (channel.streamUrl.startsWith('/') || channel.streamUrl.startsWith('http://localhost') || channel.streamUrl.startsWith('https://localhost')) {
+      return channel.streamUrl;
+    }
+    return `/api/proxy?url=${encodeURIComponent(channel.streamUrl)}`;
+  }, [channel.streamUrl]);
+
   useEffect(() => {
     setTvFocusedChId(channel.id);
   }, [channel.id]);
@@ -191,7 +199,7 @@ const PlayerView = ({ channel, onBack, onSelectChannel, t, allChannels }: { chan
     const video = videoRef.current;
     setError(null);
     
-    if (video && channel.streamUrl) {
+    if (video && resolvedStreamUrl) {
       const isHls = isHlsUrl(channel.streamUrl);
 
       if (isHls) {
@@ -204,7 +212,7 @@ const PlayerView = ({ channel, onBack, onSelectChannel, t, allChannels }: { chan
             debug: false
           });
           
-          hls.loadSource(channel.streamUrl);
+          hls.loadSource(resolvedStreamUrl);
           hls.attachMedia(video);
           
           hls.on(Hls.Events.MANIFEST_PARSED, () => {
@@ -228,13 +236,13 @@ const PlayerView = ({ channel, onBack, onSelectChannel, t, allChannels }: { chan
             }
           });
         } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-          video.src = channel.streamUrl;
+          video.src = resolvedStreamUrl;
           video.addEventListener('loadedmetadata', () => {
             video.play().catch(() => {});
           });
         }
       } else {
-        video.src = channel.streamUrl;
+        video.src = resolvedStreamUrl;
         video.onplay = () => setError(null);
         video.onerror = () => setError("playbackError");
       }
@@ -245,7 +253,7 @@ const PlayerView = ({ channel, onBack, onSelectChannel, t, allChannels }: { chan
         video.load();
       };
     }
-  }, [channel.streamUrl, refreshKey]);
+  }, [resolvedStreamUrl, refreshKey]);
 
   return (
     <motion.div 
