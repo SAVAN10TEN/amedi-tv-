@@ -1706,6 +1706,8 @@ const ActivationScreen = ({
   const [status, setStatus] = useState<{ type: 'idle' | 'success' | 'error'; message: string }>({ type: 'idle', message: '' });
   const [showPayDetails, setShowPayDetails] = useState(true);
   const [copiedAccount, setCopiedAccount] = useState(false);
+  const [copiedQi, setCopiedQi] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<'fib' | 'qi'>('fib');
   const [selectedPeriod, setSelectedPeriod] = useState<'1month' | '6months' | '1year'>('6months');
 
   const actText: { 
@@ -1733,6 +1735,9 @@ const ActivationScreen = ({
       activationStepCode: string;
       haveCodeNotice: string;
       activationSuccessNotice: string;
+      qiInstructions: string;
+      copyQiAccount: string;
+      qiAccountNumber: string;
     } 
   } = {
     English: {
@@ -1743,8 +1748,8 @@ const ActivationScreen = ({
       contactLabel: "Don't have an active code? Contact Savan Amedi",
       successMsg: "Activated successfully! Enjoy watching Amedi TV.",
       errorMsg: "Invalid activation code. Please try again or contact developer.",
-      payToGet: "💳 Pay via FIB to Get Code",
-      payInstructions: "Transfer the subscription code fee to our First Iraqi Bank (FIB) account below. Once paid, send the transaction screenshot to Savan Amedi on Snapchat to receive your code instantly.",
+      payToGet: "💳 Pay via FIB or Super Qi to Get Code",
+      payInstructions: "Select a payment method and transfer the subscription fee according to your chosen plan. Once payment is completed, send the screenshot to Savan Amedi on Snapchat to receive your activation code instantly.",
       copyAccount: "Copy FIB Account ID",
       copied: "Copied successfully! 🎉",
       orContact: "Send screenshot on Snapchat:",
@@ -1759,6 +1764,9 @@ const ActivationScreen = ({
       activationStepCode: "2. Enter your activation code:",
       haveCodeNotice: "Make sure you have your code before activating the subscription.",
       activationSuccessNotice: "Once you have the code and complete the activation process, the subscription will be activated successfully.",
+      qiInstructions: "Transfer the subscription fee via Super Qi Wallet. Copy our Wallet ID below, complete the transfer, and send the screenshot to Savan Amedi on Snapchat.",
+      copyQiAccount: "Copy Super Qi Wallet ID",
+      qiAccountNumber: "Super Qi Wallet Number",
     },
     Kurdish: {
       title: "چالاککردن پێویستە",
@@ -1768,8 +1776,8 @@ const ActivationScreen = ({
       contactLabel: "کۆدی چالاککردنت نییە؟ پەیوەندی بە ساڤان ئامێدی بکە",
       successMsg: "بەسەرکەوتوویی چالاککرا! هیوای بینینێکی خۆش بۆ ئامێدی تیڤی.",
       errorMsg: "کۆدی چالاککردنەکە هەڵەیە. تکایە دووبارە هەوڵبدەرەوە یان پەیوەندی بە گەشەپێدەر بکە.",
-      payToGet: "💳 پارەدان لە ڕێگەی FIB بۆ بەدەستهێنانی کۆد",
-      payInstructions: "بڕی پارەی بەشداریکردنەکە بنێرە بۆ ئەژمارەی فێست عێراق بانک (FIB) لە خوارەوە. پاش گواستنەوە، وێنەی شاشەی سەرکەوتووی پارەدانەکە (سکرینشۆت) بۆ ساڤان ئامێدی بنێرە لە ڕێگەی سناپچات بۆ وەرگرتنی کۆدەکە بە خێرایی.",
+      payToGet: "💳 پارەدان لە ڕێگەی FIB یان سوپەر کی بۆ بەدەستهێنانی کۆد",
+      payInstructions: "ڕێگەیەکی پارەدان هەڵبژێره و بڕی پارەی بەشداریکردنەکە بەپێی پلانەکەت بنێرە. پاش گواستنەوە پێویستە وێنەی شاشەی سەرکەوتنی ناردنەکە بۆ ساڤان ئامێدی بنێریت لە سناپچات بۆ وەرگرتنی کۆدەکە بە خێرایی.",
       copyAccount: "کۆپیکردنی ژمارەی ئەژماری FIB",
       copied: "بە سەرکەوتوویی کۆپی کرا! 🎉",
       orContact: "وێنەی شاشەکە بنێرە بۆ سناپچاتی ساڤان:",
@@ -1778,12 +1786,15 @@ const ActivationScreen = ({
       sixMonthsLabel: "٦ مانگ",
       oneYearLabel: "١ ساڵ",
       iqd: "دینار",
-      selectPeriodPrompt: "١. ماوەی بەشداریکردن دیاری بکە:",
+      selectPeriodPrompt: "١. ماوەی بەشداریکردنی پێویست دیاری بکە:",
       selectedPlanLabel: "ماوەی بەشداریکردنی هەڵبژێردراو",
-      requiredAmountLabel: "بڕی پارەی پێویست بۆ ناردن",
+      requiredAmountLabel: "بڕی پارەی پێویست",
       activationStepCode: "٢. کۆدی چالاککردنەکە لێرە بنووسە:",
       haveCodeNotice: "تکایە دڵنیابەرەوە لەوەی کەکۆدی چالاککردنەکەت لایە پێش ئەوەی بەشداریکردنەکە چالاک بکەیت.",
       activationSuccessNotice: "کاتێک کۆدەکەت دەستکەوت و پڕۆسەی چالاککردنەکەت تەواو کرد، بەشداریکردنەکەت بە سەرکەوتوویی چالاک دەبێت.",
+      qiInstructions: "بڕی پارەی بەشداریکردنەکە بنێرە بۆ جزدانی سوپەر کی (Super Qi) لە خوارەوە. ژمارەی جزدانەکە کۆپی بکە، پارەکە بنێرە، و پاشان وێنەی شاشەکە بۆ ساڤان ئامێدی بنێرە لە سناپچات.",
+      copyQiAccount: "کۆپیکردنی مۆبایلی جزدانی Super Qi",
+      qiAccountNumber: "ژمارەی جزدانی سوپەر کی (Super Qi)",
     },
     Badini: {
       title: "چالاککرن یا پێدڤییە",
@@ -1793,8 +1804,8 @@ const ActivationScreen = ({
       contactLabel: "کۆدێ چالاککرنێ ل دەف تە نینە؟ پەیوەندیێ ب ساڤان ئامێدی بکە",
       successMsg: "ب سەرکەفتی هاتە چالاککرن! بینینەکا خۆش بۆ ئامێدی تیڤی.",
       errorMsg: "کۆدێ چالاککرنێ خەلەتە. تکایە جارەکا دی تاقی بکە یان پەیوەندیێ ب گەشەپێدەر بکە.",
-      payToGet: "💳 پارەدان ب رێكا FIB بۆ وەرگرتنا کۆدی",
-      payInstructions: "بڕێ کۆژمێ پارەیێ پشکداریێ فرێکە بۆ سەر هەژمارا مە یا فێست عێراق بانک (FIB) ل خوارێ. پشتی فرێکرنێ، وێنەکێ شاشەیێ (سکرینشۆت) بۆ ساڤان ئامێدی فرێکە ل سەر سناپچاتی دا کۆدێ تە ب خێرایی بۆ تە بهێتە فرێکرن.",
+      payToGet: "💳 پارەدان ب رێكا FIB یان سوپەر کی بۆ وەرگرتنا کۆدی",
+      payInstructions: "رێکا پارەدانەکێ هەلبژێره و بهایێ پشکداریێ ل دیف پلانا خۆ فرێکە. پشتی فرێکرنێ پێدڤییە وێنێ شاشەیێ بۆ ساڤان ئامێدی بفرێکی ل سەر سناپچاتی دا کۆدێ تە ب خێرایی بۆ تە بهێتە فرێکرن.",
       copyAccount: "کۆپیکرنا ژمارا هەژمارا FIB",
       copied: "ب سەرکەفتی هاتە کۆپیکرن! 🎉",
       orContact: "وێنێ شاشەیێ بۆ سناپێ ساڤانی فرێکە:",
@@ -1805,10 +1816,13 @@ const ActivationScreen = ({
       iqd: "دینار",
       selectPeriodPrompt: "١. ماوێ پشکداریا خۆ دەستنیشان بکە:",
       selectedPlanLabel: "ماوێ پشکداریا دەستنیشانکری",
-      requiredAmountLabel: "کۆژمێ پارەیێ کەتێ پێدڤییە فڕێکەی",
+      requiredAmountLabel: "کۆژمێ پارەیێ کەتێ پێدڤی",
       activationStepCode: "٢. کۆدێ چالاککرنێ بنڤیسە:",
       haveCodeNotice: "تکایە پشتراست بە کو تە کۆدێ چالاککرنێ ل دەف تە هەیە پێش هندێ تو پشکداریێ چالاک بکەی.",
       activationSuccessNotice: "دەمێ کۆدێ خۆ تە وەرگرت و پڕۆسێسا چالاککرنێ ب دوماهی ئینا، پشکداریا تە دێ ب سەرکەفتی هێتە چالاککرن.",
+      qiInstructions: "بها یێ پشکداریێ فرێکە بۆ سەر جزدانا سوپەر کی (Super Qi) ل خوارێ. ژمارا جزدانێ کۆپی بکە، پارەی فڕێکە، و پشتی هینگێ وێنێ شاشەیێ بۆ سناپێ ساڤانی فرێکە.",
+      copyQiAccount: "کۆپیکرنا مۆبایلا جزدانا Super Qi",
+      qiAccountNumber: "ژمارا جزدانا سوپەر کی (Super Qi)",
     },
     Arabic: {
       title: "مطلوب التفعيل",
@@ -1818,10 +1832,10 @@ const ActivationScreen = ({
       contactLabel: "ليس لديك رمز تفعيل؟ تواصل مع سافان أميدي",
       successMsg: "تم التفعيل بنجاح! مشاهدة ممتعة على أوليمبياد وأميدي تي في.",
       errorMsg: "رمز التفعيل غير صحيح. يرجى المحاولة مرة أخرى أو الاتصال بالمطور.",
-      payToGet: "💳 الدفع عبر FIB للحصول على الرمز",
-      payInstructions: "قم بتحويل رسوم الاشتراك إلى حساب المصرف العراقي الأول (FIB) الموضح أدناه. بعد إتمام الدفع، أرسل لقطة الشاشة إلى سافان أميدي على سناب شات للحصول على الرمز فوراً.",
+      payToGet: "💳 الدفع عبر FIB أو سوبر كي للحصول على الرمز",
+      payInstructions: "اختر طريقة الدفع المناسبة وقم بتحويل رسوم الاشتراك وفقاً للمدة المحددة. بعد إتمام الدفع، أرسل لقطة الشاشة إلى سافان أميدي على سناب شات لاستلام رمز التفعيل فوراً.",
       copyAccount: "نسخ رقم حساب FIB",
-      copied: "تم النسخ بنجاح! 🎉",
+      copied: "تم الرفع بنجاح! 🎉",
       orContact: "أرسل لقطة الشاشة إلى سناب شات المطور:",
       pricingTitle: "أسعار كود التفعيل",
       oneMonthLabel: "شهر واحد",
@@ -1830,10 +1844,13 @@ const ActivationScreen = ({
       iqd: "د.ع",
       selectPeriodPrompt: "١. اختر مدة الاشتراك المطلوبة:",
       selectedPlanLabel: "مدة الاشتراك المحددة",
-      requiredAmountLabel: "المبلغ المطلوب تحويله إلى FIB",
+      requiredAmountLabel: "المبلغ المطلوب تحويله",
       activationStepCode: "٢. أدخل كود التفعيل الذي استلمته هنا:",
       haveCodeNotice: "يرجى التأكد من أن لديك كود تفعيل خاص بك قبل تفعيل الاشتراك.",
       activationSuccessNotice: "بمجرد حصولك على الكود وإتمام عملية التفعيل، سيتم تفعيل اشتراكك بنجاح.",
+      qiInstructions: "قم بتحويل رسوم الاشتراك إلى محفظة سوبر كي (Super Qi) أدناه. انسخ رقم المحفظة، وأكمل التحويل، ثم أرسل لقطة الشاشة إلى سافان أميدي على سناب شات.",
+      copyQiAccount: "نسخ رقم محفظة Super Qi",
+      qiAccountNumber: "رقم محفظة سوبر كي (Super Qi)",
     }
   };
 
@@ -1882,6 +1899,16 @@ const ActivationScreen = ({
       setTimeout(() => setCopiedAccount(false), 2000);
     } catch (err) {
       console.warn("Failed to copy FIB text", err);
+    }
+  };
+
+  const handleCopyQi = async () => {
+    try {
+      await navigator.clipboard.writeText('07823549100');
+      setCopiedQi(true);
+      setTimeout(() => setCopiedQi(false), 2000);
+    } catch (err) {
+      console.warn("Failed to copy Qi text", err);
     }
   };
 
@@ -2004,6 +2031,32 @@ const ActivationScreen = ({
                 {currentAct.payInstructions}
               </p>
 
+              {/* Payment Method Selector Tabs */}
+              <div className="flex p-1 bg-black/40 border border-white/5 rounded-xl gap-1">
+                <button
+                  type="button"
+                  onClick={() => setPaymentMethod('fib')}
+                  className={`flex-1 py-2 text-[10px] font-black uppercase rounded-lg transition-all cursor-pointer text-center ${
+                    paymentMethod === 'fib'
+                      ? 'bg-brand-accent text-white shadow-md shadow-brand-accent/20'
+                      : 'text-white/60 hover:text-white/90 hover:bg-white/5'
+                  }`}
+                >
+                  FIB (First Iraqi Bank)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPaymentMethod('qi')}
+                  className={`flex-1 py-2 text-[10px] font-black uppercase rounded-lg transition-all cursor-pointer text-center ${
+                    paymentMethod === 'qi'
+                      ? 'bg-brand-accent text-white shadow-md shadow-brand-accent/20'
+                      : 'text-white/60 hover:text-white/90 hover:bg-white/5'
+                  }`}
+                >
+                  Super Qi Pay
+                </button>
+              </div>
+
               {/* Subscription Pricing Grid */}
               <div className="flex flex-col gap-2 mt-1">
                 <span className="text-[10px] font-black uppercase text-brand-accent tracking-wider block text-center mb-1">
@@ -2103,30 +2156,61 @@ const ActivationScreen = ({
                 </div>
               </div>
 
-              <div className="bg-white/5 rounded-xl p-3 border border-white/5 text-center flex flex-col items-center justify-center gap-1">
-                <span className="text-[9px] text-brand-accent uppercase tracking-widest font-black">FIB Account Number</span>
-                <span className="text-sm font-black text-white tracking-wider font-mono">P7AZPUOWHQFL</span>
-                <span className="text-[10px] text-white/40 font-bold uppercase shrink-0">Savan Amedi</span>
-                <button
-                  type="button"
-                  onClick={handleCopyFIB}
-                  className="mt-2 text-[10px] font-black uppercase tracking-wider bg-white/10 hover:bg-white/20 active:scale-95 text-white/90 rounded-lg px-3 py-1.5 cursor-pointer border border-white/5"
-                >
-                  {copiedAccount ? currentAct.copied : currentAct.copyAccount}
-                </button>
-              </div>
+              {/* Conditional payment instruction details card */}
+              {paymentMethod === 'fib' ? (
+                <>
+                  <div className="bg-white/5 rounded-xl p-3 border border-white/5 text-center flex flex-col items-center justify-center gap-1">
+                    <span className="text-[9px] text-brand-accent uppercase tracking-widest font-black">FIB Account Number</span>
+                    <span className="text-sm font-black text-white tracking-wider font-mono">P7AZPUOWHQFL</span>
+                    <span className="text-[10px] text-white/40 font-bold uppercase shrink-0">Savan Amedi</span>
+                    <button
+                      type="button"
+                      onClick={handleCopyFIB}
+                      className="mt-2 text-[10px] font-black uppercase tracking-wider bg-white/10 hover:bg-white/20 active:scale-95 text-white/90 rounded-lg px-3 py-1.5 cursor-pointer border border-white/5"
+                    >
+                      {copiedAccount ? currentAct.copied : currentAct.copyAccount}
+                    </button>
+                  </div>
 
-              <div className="w-28 h-28 mx-auto bg-white rounded-xl p-1.5 flex items-center justify-center border border-white/10">
-                <img 
-                  src="https://i.postimg.cc/J0Y5zQCz/IMG-20260518-053546.jpg" 
-                  alt="FIB QR Code For Payments" 
-                  className="w-full h-full object-contain"
-                  referrerPolicy="no-referrer"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).src = 'https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=P7AZPUOWHQFL';
-                  }}
-                />
-              </div>
+                  <div className="w-28 h-28 mx-auto bg-white rounded-xl p-1.5 flex items-center justify-center border border-white/10">
+                    <img 
+                      src="https://i.postimg.cc/J0Y5zQCz/IMG-20260518-053546.jpg" 
+                      alt="FIB QR Code For Payments" 
+                      className="w-full h-full object-contain"
+                      referrerPolicy="no-referrer"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = 'https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=P7AZPUOWHQFL';
+                      }}
+                    />
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="bg-white/5 rounded-xl p-3 border border-white/5 text-center flex flex-col items-center justify-center gap-1">
+                    <span className="text-[9px] text-brand-accent uppercase tracking-widest font-black">
+                      {currentAct.qiAccountNumber}
+                    </span>
+                    <span className="text-sm font-black text-white tracking-wider font-mono">07823549100</span>
+                    <span className="text-[10px] text-white/40 font-bold uppercase shrink-0">Savan Amedi</span>
+                    <button
+                      type="button"
+                      onClick={handleCopyQi}
+                      className="mt-2 text-[10px] font-black uppercase tracking-wider bg-white/10 hover:bg-white/20 active:scale-95 text-white/90 rounded-lg px-3 py-1.5 cursor-pointer border border-white/5"
+                    >
+                      {copiedQi ? currentAct.copied : currentAct.copyQiAccount}
+                    </button>
+                  </div>
+
+                  <div className="w-28 h-28 mx-auto bg-white rounded-xl p-1.5 flex items-center justify-center border border-white/10">
+                    <img 
+                      src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=07823549100" 
+                      alt="Super Qi QR Code For Payments" 
+                      className="w-full h-full object-contain"
+                      referrerPolicy="no-referrer"
+                    />
+                  </div>
+                </>
+              )}
 
               <div className="flex flex-col items-center gap-2 mt-1 border-t border-white/5 pt-3">
                 <span className="text-[10px] font-bold text-white/60">{currentAct.orContact}</span>
