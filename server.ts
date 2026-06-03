@@ -21,6 +21,60 @@ try {
   console.error("[Channels DB] Error loading custom channels:", e);
 }
 
+// Load and manage Ads configuration persistently
+const adsConfigPath = path.join(process.cwd(), "ads_config.json");
+let adsConfig = {
+  adsEnabled: true,
+  adSenseEnabled: false,
+  adSenseClientId: "",
+  adSenseSlotId: "",
+  customBannerActive: true,
+  customBanners: [
+    {
+      id: "ad-banner-1",
+      image: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=1964&auto=format&fit=crop",
+      url: "https://www.snapchat.com/add/savan10.ten?share_id=P_WZNoKBOyw&locale=en-US",
+      title: "Google AdSense & Custom Ads Supported!",
+      desc: "Advertise your Snapchat, business, or website here. Support Google AdSense and custom banner rotation. Tap/Click to contact Savan Amedi!"
+    }
+  ],
+  placements: {
+    belowCategories: true,
+    insidePlayer: true
+  }
+};
+
+try {
+  if (fs.existsSync(adsConfigPath)) {
+    const fileData = fs.readFileSync(adsConfigPath, "utf-8");
+    adsConfig = { ...adsConfig, ...JSON.parse(fileData) };
+    console.log("[Ads DB] Successfully loaded Ads configuration.");
+  } else {
+    fs.writeFileSync(adsConfigPath, JSON.stringify(adsConfig, null, 2), "utf-8");
+  }
+} catch (e) {
+  console.error("[Ads DB] Error loading Ads configuration:", e);
+}
+
+// Load and manage Activation configuration persistently
+const activationConfigPath = path.join(process.cwd(), "activation_config.json");
+let activationConfig = {
+  requireActivation: true,
+  validCodes: ["AMEDI2029", "SAVAN10", "ACTIVE-TV"]
+};
+
+try {
+  if (fs.existsSync(activationConfigPath)) {
+    const fileData = fs.readFileSync(activationConfigPath, "utf-8");
+    activationConfig = { ...activationConfig, ...JSON.parse(fileData) };
+    console.log("[Activation DB] Successfully loaded Activation configuration.");
+  } else {
+    fs.writeFileSync(activationConfigPath, JSON.stringify(activationConfig, null, 2), "utf-8");
+  }
+} catch (e) {
+  console.error("[Activation DB] Error loading Activation configuration:", e);
+}
+
 let allChannelsServer = [...CHANNELS, ...customChannels];
 let channelsVersion = Date.now().toString();
 
@@ -598,6 +652,99 @@ async function startServer() {
     } catch (err: any) {
       console.error("[Channels DB] Failed to save channel:", err);
       res.status(500).json({ error: "Failed to save channel on server" });
+    }
+  });
+
+  // Ads monetization API definitions
+  app.get("/api/ads", (req, res) => {
+    res.json(adsConfig);
+  });
+
+  app.post("/api/ads", (req, res) => {
+    const { 
+      adsEnabled, 
+      adSenseEnabled, 
+      adSenseClientId, 
+      adSenseSlotId, 
+      customBannerActive, 
+      customBanners, 
+      placements 
+    } = req.body;
+
+    adsConfig = {
+      adsEnabled: typeof adsEnabled === 'boolean' ? adsEnabled : adsConfig.adsEnabled,
+      adSenseEnabled: typeof adSenseEnabled === 'boolean' ? adSenseEnabled : adsConfig.adSenseEnabled,
+      adSenseClientId: typeof adSenseClientId === 'string' ? adSenseClientId.trim() : adsConfig.adSenseClientId,
+      adSenseSlotId: typeof adSenseSlotId === 'string' ? adSenseSlotId.trim() : adsConfig.adSenseSlotId,
+      customBannerActive: typeof customBannerActive === 'boolean' ? customBannerActive : adsConfig.customBannerActive,
+      customBanners: Array.isArray(customBanners) ? customBanners : adsConfig.customBanners,
+      placements: placements || adsConfig.placements
+    };
+
+    try {
+      fs.writeFileSync(adsConfigPath, JSON.stringify(adsConfig, null, 2), "utf-8");
+      console.log("[Ads DB] Successfully updated Ads configuration.");
+      
+      // Broadcast live setting updates to all connected browsers
+      broadcastEvent("ads-config-updated", { config: adsConfig });
+      
+      res.json({ success: true, config: adsConfig });
+    } catch (err) {
+      console.error("[Ads DB] Failed to update ads config:", err);
+      res.status(500).json({ error: "Failed to save ads config on server" });
+    }
+  });
+
+  // Activation / active code API definitions
+  app.get("/api/activation-status", (req, res) => {
+    res.json({ requireActivation: activationConfig.requireActivation });
+  });
+
+  app.post("/api/activation/validate", (req, res) => {
+    const { code } = req.body;
+    if (!code) {
+      return res.status(400).json({ success: false, message: "Code parameter is required" });
+    }
+    const cleanCode = code.trim().toUpperCase();
+    
+    // Check direct list
+    let isValid = activationConfig.validCodes.some(
+      (vc) => vc.trim().toUpperCase() === cleanCode
+    );
+
+    // Do not activate unless the code is in the paid activationConfig.validCodes list.
+    // Free dynamic patterns are disabled to enforce payment.
+
+    if (isValid) {
+      res.json({ success: true, message: "Active code validated successfully" });
+    } else {
+      res.json({ success: false, message: "Invalid active code provided" });
+    }
+  });
+
+  app.get("/api/admin/activation-config", (req, res) => {
+    res.json(activationConfig);
+  });
+
+  app.post("/api/admin/activation-config", (req, res) => {
+    const { requireActivation, validCodes } = req.body;
+
+    activationConfig = {
+      requireActivation: typeof requireActivation === 'boolean' ? requireActivation : activationConfig.requireActivation,
+      validCodes: Array.isArray(validCodes) ? validCodes.map(c => String(c).trim()) : activationConfig.validCodes
+    };
+
+    try {
+      fs.writeFileSync(activationConfigPath, JSON.stringify(activationConfig, null, 2), "utf-8");
+      console.log("[Activation DB] Successfully updated Admission Activation configuration.");
+      
+      // Broadcast live setting updates to all connected browsers
+      broadcastEvent("activation-config-updated", { config: activationConfig });
+      
+      res.json({ success: true, config: activationConfig });
+    } catch (err) {
+      console.error("[Activation DB] Failed to update activation config:", err);
+      res.status(500).json({ error: "Failed to save activation configuration on server" });
     }
   });
 

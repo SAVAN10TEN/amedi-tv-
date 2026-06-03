@@ -10,7 +10,7 @@ export const CHANNELS: Channel[] = [
     name: 'AVA Media',
     logo: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQHjoEAP1GGyOn-_z3KpXocINiq6Pjo4RR3OpRoEf5G4w&s=10',
     categories: ['Kurdish', 'News', 'General'],
-    streamUrl: 'https://ameditv.kurdiish.workers.dev/https://ava2.store/upload/ava.m3u8'
+    streamUrl: '/api/proxy?url=https://ava2.store/upload/ava.m3u8'
   },
   {
     id: 'rudaw',

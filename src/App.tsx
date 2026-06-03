@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'motion/react';
-import { Search, Globe, Home, Info, X, ChevronLeft, LayoutGrid, MonitorPlay, Cast, Play, Download, Smartphone, RefreshCw, Sparkles, Bell, BellOff, Share, Compass, Plus, Tv, Megaphone, Phone, MessageCircle, Ghost, Youtube, Instagram, Music2 } from 'lucide-react';
+import { Search, Globe, Home, Info, X, ChevronLeft, LayoutGrid, MonitorPlay, Cast, Play, Download, Smartphone, RefreshCw, Sparkles, Bell, BellOff, Share, Compass, Plus, Tv, Megaphone, Phone, MessageCircle, Ghost, Youtube, Instagram, Music2, Key, ExternalLink } from 'lucide-react';
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import Hls from 'hls.js';
 import { Category, Language, Channel } from './types';
@@ -78,7 +78,7 @@ const isHlsUrl = (url: string) => {
   return false;
 };
 
-const PlayerView = ({ channel, onBack, onSelectChannel, t, allChannels }: { channel: Channel, onBack: () => void, onSelectChannel: (c: Channel) => void, t: any, allChannels: Channel[] }) => {
+const PlayerView = ({ channel, onBack, onSelectChannel, t, allChannels, adsConfig, isRtl }: { channel: Channel, onBack: () => void, onSelectChannel: (c: Channel) => void, t: any, allChannels: Channel[], adsConfig: any, isRtl: boolean }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [error, setError] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -385,7 +385,15 @@ const InfoModal = ({
   manualUpdateChecked,
   onApplySwUpdate,
   tvMode,
-  onToggleTvMode
+  onToggleTvMode,
+  adsConfig,
+  onSaveAdsConfig,
+  activationConfig,
+  onSaveActivationConfig,
+  isActivated,
+  activatedPeriod,
+  activatedAt,
+  onDeactivate
 }: {
   isOpen: boolean;
   onClose: () => void;
@@ -401,6 +409,14 @@ const InfoModal = ({
   onApplySwUpdate: () => void;
   tvMode: boolean;
   onToggleTvMode: () => void;
+  adsConfig: any;
+  onSaveAdsConfig: (newConfig: any) => Promise<boolean>;
+  activationConfig: { requireActivation: boolean; validCodes: string[] };
+  onSaveActivationConfig: (newConfig: { requireActivation: boolean; validCodes: string[] }) => Promise<boolean>;
+  isActivated: boolean;
+  activatedPeriod: '1month' | '6months' | '1year';
+  activatedAt: number;
+  onDeactivate: () => void;
 }) => {
   const isRtl = language === 'Kurdish' || language === 'Badini' || language === 'Arabic';
 
@@ -411,6 +427,212 @@ const InfoModal = ({
   const [bcLogo, setBcLogo] = useState('');
   const [bcSubmitting, setBcSubmitting] = useState(false);
   const [bcMessage, setBcMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  // Ad Management State
+  const [isAdminUnlocked, setIsAdminUnlocked] = useState(false);
+  const [pinInput, setPinInput] = useState('');
+  const [badPin, setBadPin] = useState(false);
+
+  // Form states local to InfoModal (preloaded from adsConfig)
+  const [adsEnabled, setAdsEnabled] = useState(true);
+  const [adSenseEnabled, setAdSenseEnabled] = useState(false);
+  const [adSenseClientId, setAdSenseClientId] = useState('');
+  const [adSenseSlotId, setAdSenseSlotId] = useState('');
+  const [customBannerActive, setCustomBannerActive] = useState(true);
+  const [bannerTitle, setBannerTitle] = useState('');
+  const [bannerDesc, setBannerDesc] = useState('');
+  const [bannerImage, setBannerImage] = useState('');
+  const [bannerUrl, setBannerUrl] = useState('');
+  const [placementBelowCat, setPlacementBelowCat] = useState(true);
+  const [placementInsidePlayer, setPlacementInsidePlayer] = useState(true);
+
+  const [savingAds, setSavingAds] = useState(false);
+  const [saveAdsMsg, setSaveAdsMsg] = useState<{ type: 'success' | 'error', text: string } | null>(null);
+
+  // Activation Management States
+  const [newCodeInput, setNewCodeInput] = useState('');
+  const [saveActMsg, setSaveActMsg] = useState<{ type: 'success' | 'error', text: string } | null>(null);
+
+  const handleAddCode = async () => {
+    if (!newCodeInput.trim()) return;
+    const clean = newCodeInput.trim().toUpperCase();
+    if (activationConfig.validCodes.map(c => c.toUpperCase()).includes(clean)) {
+      setSaveActMsg({ type: 'error', text: 'This code is already active!' });
+      return;
+    }
+    const nextCodes = [...activationConfig.validCodes, clean];
+    const success = await onSaveActivationConfig({
+      ...activationConfig,
+      validCodes: nextCodes
+    });
+    if (success) {
+      setNewCodeInput('');
+      setSaveActMsg({ type: 'success', text: `Successfully added active code: ${clean}` });
+    } else {
+      setSaveActMsg({ type: 'error', text: 'Failed to add. Try again.' });
+    }
+  };
+
+  const handleRemoveCode = async (codeToRemove: string) => {
+    const nextCodes = activationConfig.validCodes.filter(c => c !== codeToRemove);
+    const success = await onSaveActivationConfig({
+      ...activationConfig,
+      validCodes: nextCodes
+    });
+    if (success) {
+      setSaveActMsg({ type: 'success', text: `Revoked code: ${codeToRemove}` });
+    } else {
+      setSaveActMsg({ type: 'error', text: 'Failed to revoke code.' });
+    }
+  };
+
+  // Synchronize when adsConfig props updates
+  useEffect(() => {
+    if (adsConfig) {
+      setAdsEnabled(!!adsConfig.adsEnabled);
+      setAdSenseEnabled(!!adsConfig.adSenseEnabled);
+      setAdSenseClientId(adsConfig.adSenseClientId || '');
+      setAdSenseSlotId(adsConfig.adSenseSlotId || '');
+      setCustomBannerActive(!!adsConfig.customBannerActive);
+      if (adsConfig.customBanners?.[0]) {
+        setBannerTitle(adsConfig.customBanners[0].title || '');
+        setBannerDesc(adsConfig.customBanners[0].desc || '');
+        setBannerImage(adsConfig.customBanners[0].image || '');
+        setBannerUrl(adsConfig.customBanners[0].url || '');
+      }
+      if (adsConfig.placements) {
+        setPlacementBelowCat(adsConfig.placements.belowCategories !== false);
+        setPlacementInsidePlayer(adsConfig.placements.insidePlayer !== false);
+      }
+    }
+  }, [adsConfig]);
+
+  const handleUnlockAdmin = () => {
+    if (pinInput === '2029') {
+      setIsAdminUnlocked(true);
+      setBadPin(false);
+    } else {
+      setBadPin(true);
+    }
+  };
+
+  const handleSaveAds = async () => {
+    setSavingAds(true);
+    setSaveAdsMsg(null);
+    const updated = {
+      adsEnabled,
+      adSenseEnabled,
+      adSenseClientId,
+      adSenseSlotId,
+      customBannerActive,
+      customBanners: [
+        {
+          id: 'ad-banner-1',
+          image: bannerImage,
+          url: bannerUrl,
+          title: bannerTitle,
+          desc: bannerDesc
+        }
+      ],
+      placements: {
+        belowCategories: placementBelowCat,
+        insidePlayer: placementInsidePlayer
+      }
+    };
+    
+    const success = await onSaveAdsConfig(updated);
+    setSavingAds(false);
+    if (success) {
+      setSaveAdsMsg({ type: 'success', text: 'Ad configuration successfully persisted!' });
+    } else {
+      setSaveAdsMsg({ type: 'error', text: 'Failed to update. Try again.' });
+    }
+  };
+
+  const adLabels = {
+    English: {
+      sectionTitle: 'Monetization & Ads 📢',
+      adminPinLabel: 'Enter Admin PIN (Default: 2029)',
+      unlockBtn: 'Unlock Tools',
+      pinError: 'Incorrect PIN!',
+      globalEnable: 'Global Ads Enable',
+      adSenseMode: 'Google AdSense Mode',
+      clientId: 'AdSense Client ID (ca-pub-xxx)',
+      slotId: 'AdSense Slot ID (10 digits)',
+      customBannerMode: 'Custom Banners Mode',
+      bannerTitle: 'Sponsor Banner Title',
+      bannerDesc: 'Sponsor Banner Text / Hook',
+      bannerImage: 'Banner Logo / Image URL',
+      bannerUrl: 'Sponsor Link (Snapchat, Shop, etc.)',
+      placementsTitle: 'Active Ad Placements',
+      placeBelowCat: 'Show Below Channel Categories',
+      placeInPlayer: 'Show Inside Video Player',
+      saveBtn: 'Save Settings',
+      saving: 'Saving...',
+    },
+    Kurdish: {
+      sectionTitle: 'پڕۆگرامی ڕیکلام 📢',
+      adminPinLabel: 'پینی بەڕێوەبەر بنووسە (بنەڕەتی: 2029)',
+      unlockBtn: 'بیکەرەوە',
+      pinError: 'کۆدی پین هەڵەیە!',
+      globalEnable: 'چالاککردنی سەرجەم ڕیکلامەکان',
+      adSenseMode: 'دۆخی گووڵ ئەدسێنس',
+      clientId: 'ناسنامەی کڕیاری ئەدسێنس (Client ID)',
+      slotId: 'ناسنامەی شوێنی ڕیکلام (Slot ID)',
+      customBannerMode: 'دۆخی پانێڵی سپۆنسەری',
+      bannerTitle: 'ناونیشانی ڕیکلامی سپۆنسەر',
+      bannerDesc: 'دەقی سەرەکی ڕیکلامی سپۆنسەر',
+      bannerImage: 'لینک یان هێڵکاری لۆگۆی سپۆنسەر',
+      bannerUrl: 'بەستەری کلیک (سناپچات، دوکان، هتد.)',
+      placementsTitle: 'شوێنی چالاکی ڕیکلامەکان',
+      placeBelowCat: 'پیشاندان لە ژێر بەشەکان',
+      placeInPlayer: 'پیشاندان لە ناو ڤیدیۆ پلەیەر',
+      saveBtn: 'پاشەکەوت بکە',
+      saving: 'خەریکی پاشەکەوتکردنە...',
+    },
+    Badini: {
+      sectionTitle: 'سیستەما ریکلامێ 📢',
+      adminPinLabel: 'کۆدێ پینێ رێڤەبەری بنڤیسە (دیاری: 2029)',
+      unlockBtn: 'ڤەکە',
+      pinError: 'کۆدێ پین خەلەتە!',
+      globalEnable: 'چالاککرنا هەمی ریکلامان',
+      adSenseMode: 'دۆخێ گوگل ئەدسێنس',
+      clientId: 'ناسنامەیا کڕیارێ ئەدسێنس (Client ID)',
+      slotId: 'ناسنامەیا شوینێ ریکلامێ (Slot ID)',
+      customBannerMode: 'سیستەما پانێلا سپۆنسەری',
+      bannerTitle: 'ناڤ و نیشانێ رەنگێ ریکلامێ',
+      bannerDesc: 'پەیاما سەرەکی یا ریکلامێ',
+      bannerImage: 'لینک یان نیشانی وێنەکێ سپۆنسەری',
+      bannerUrl: 'بەحیات کەنالی (سناپ، مارکێت، هتد.)',
+      placementsTitle: 'سوینێن بەلاڤکرنا ریکلامان',
+      placeBelowCat: 'نیشاندان د بن بەشێن کەنالان دا',
+      placeInPlayer: 'نیشاندان د ناڤ ڤیدیۆ پلەیەری دا',
+      saveBtn: 'کۆپی بکە / پاشەکەوت بکە',
+      saving: 'یێ دپارێزیت...',
+    },
+    Arabic: {
+      sectionTitle: 'الإعلانات والربح 📢',
+      adminPinLabel: 'أدخل رمز PIN للمسؤول (الافتراضي: 2029)',
+      unlockBtn: 'تأكيد',
+      pinError: 'رمز PIN غير صحيح!',
+      globalEnable: 'تمكين الإعلانات العام',
+      adSenseMode: 'وضع قوقل أدسنس (Google AdSense)',
+      clientId: 'معرّف الناشر (Client ID)',
+      slotId: 'معرّف الإعلان (Slot ID)',
+      customBannerMode: 'وضع الإعلانات والبنرات المخصصة',
+      bannerTitle: 'عنوان بنر الراعي',
+      bannerDesc: 'نص ووصف الإعلان',
+      bannerImage: 'رابط صورة أو شعار الراعي',
+      bannerUrl: 'رابط التوجيه عند الضغط (سناب شات، متجر، إلخ)',
+      placementsTitle: 'أماكن عرض الإعلانات',
+      placeBelowCat: 'العرض تحت تبويبات القنوات',
+      placeInPlayer: 'العرض داخل مشغل القنوات',
+      saveBtn: 'حفظ الإعدادات',
+      saving: 'جاري الحفظ والرفع...',
+    }
+  };
+
+  const adl = adLabels[language] || adLabels.English;
 
   const broadcastLabels = {
     English: {
@@ -553,12 +775,79 @@ const InfoModal = ({
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.9, opacity: 0 }}
-            className="fixed inset-4 m-auto h-fit glass-card rounded-[40px] z-[71] p-8 max-w-sm flex flex-col gap-5 shadow-2xl border border-white/10 text-white max-h-[95vh] overflow-y-auto no-scrollbar"
+            className="fixed inset-4 m-auto h-fit glass-card rounded-[40px] z-[71] p-6 md:p-8 max-w-md w-[calc(100%-2rem)] flex flex-col gap-5 shadow-2xl border border-white/10 text-white max-h-[95vh] overflow-y-auto no-scrollbar"
           >
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-black">{t.appTitle} Hub</h2>
               <button onClick={onClose} className="p-2 rounded-full hover:bg-white/5 transition-colors"><X className="w-6 h-6" /></button>
             </div>
+
+            {/* Premium Subscription Card */}
+            {isActivated && (
+              <div className="bg-gradient-to-br from-[#1c1236]/90 to-[#0f0a20]/95 rounded-3xl p-5 border border-brand-accent/30 shadow-[0_4px_25px_rgba(147,51,234,0.15)] relative overflow-hidden flex flex-col gap-3">
+                <div className="absolute top-0 right-0 bg-brand-accent text-white text-[8px] font-black uppercase tracking-widest px-2.5 py-1 rounded-bl-xl shadow-md">
+                  PREMIUM
+                </div>
+                
+                <div className="flex items-center gap-3" dir={isRtl ? 'rtl' : 'ltr'}>
+                  <div className="w-10 h-10 rounded-xl bg-brand-accent/20 border border-brand-accent/35 flex items-center justify-center animate-pulse">
+                    <Sparkles className="w-5 h-5 text-brand-accent" />
+                  </div>
+                  <div className={isRtl ? 'text-right' : 'text-left'}>
+                    <p className="text-xs font-bold text-white/50 uppercase tracking-wider leading-none">
+                      {language === 'Kurdish' ? 'دۆخی بەشداریکردن' : language === 'Badini' ? 'بارێ پشکداریێ' : language === 'Arabic' ? 'حالة الاشتراك' : 'Subscription Status'}
+                    </p>
+                    <p className="text-sm font-black text-brand-accent mt-1 leading-none">
+                      {activatedPeriod === '1month' 
+                        ? (language === 'Kurdish' ? 'بەشداریکردنی ١ مانگی' : language === 'Badini' ? 'پشکداریا ١ هەیڤی' : language === 'Arabic' ? 'اشتراك شهر واحد' : '1 Month Premium')
+                        : activatedPeriod === '6months'
+                        ? (language === 'Kurdish' ? 'بەشداریکردنی ٦ مانگی' : language === 'Badini' ? 'پشکداریا ٦ هەیڤی' : language === 'Arabic' ? 'اشتراك ٦ أشهر' : '6 Months Premium')
+                        : (language === 'Kurdish' ? 'بەشداریکردنی ١ ساڵیی' : language === 'Badini' ? 'پشکداریا ١ سالی' : language === 'Arabic' ? 'اشتراك سنة كاملة' : '1 Year Premium')}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="h-px bg-white/5 w-full my-1" />
+
+                <div className="grid grid-cols-2 gap-2 text-xs" dir={isRtl ? 'rtl' : 'ltr'}>
+                  <div className={`p-2.5 bg-black/20 rounded-xl border border-white/5 ${isRtl ? 'text-right' : 'text-left'}`}>
+                    <p className="text-[10px] font-bold text-white/40 uppercase tracking-wider">
+                      {language === 'Kurdish' ? 'چالاککراوە لە' : language === 'Badini' ? 'چالاککریە ل' : language === 'Arabic' ? 'تاريخ التفعيل' : 'Activated At'}
+                    </p>
+                    <p className="font-extrabold text-white mt-1">
+                      {new Date(activatedAt).toLocaleDateString()}
+                    </p>
+                  </div>
+                  <div className={`p-2.5 bg-black/20 rounded-xl border border-white/5 ${isRtl ? 'text-right' : 'text-left'}`}>
+                    <p className="text-[10px] font-bold text-white/40 uppercase tracking-wider">
+                      {language === 'Kurdish' ? 'ڕۆژانی ماوە' : language === 'Badini' ? 'رووژێن ماین' : language === 'Arabic' ? 'الأيام المتبقية' : 'Days Remaining'}
+                    </p>
+                    <p className="font-extrabold text-emerald-400 mt-1 flex items-baseline gap-1">
+                      {(() => {
+                        let durationDays = 180;
+                        if (activatedPeriod === '1month') durationDays = 30;
+                        else if (activatedPeriod === '1year') durationDays = 365;
+                        const expirationTime = activatedAt + (durationDays * 24 * 60 * 60 * 1000);
+                        const daysLeft = Math.ceil((expirationTime - Date.now()) / (24 * 60 * 60 * 1000));
+                        return daysLeft > 0 ? daysLeft : 0;
+                      })()} {language === 'Kurdish' ? 'ڕۆژ' : language === 'Badini' ? 'روژ' : language === 'Arabic' ? 'يوم' : 'Days'}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex justify-between items-center gap-2 mt-1">
+                  <span className="text-[9px] font-bold text-white/30 uppercase">
+                    {language === 'Kurdish' ? 'ئامێری پارێزراو' : language === 'Badini' ? 'ئامیرێ پاراستی' : language === 'Arabic' ? 'الربط الآمن للجهاز' : 'Secure Device Linked'}
+                  </span>
+                  <button 
+                    onClick={onDeactivate}
+                    className="text-[9px] font-black uppercase text-red-400 hover:text-red-300 transition-colors bg-red-400/10 hover:bg-red-400/20 px-2.5 py-1 rounded-lg border border-red-500/20 cursor-pointer animate-none"
+                  >
+                    {language === 'Kurdish' ? 'گۆڕینی کۆد / دەرچوون' : language === 'Badini' ? 'گوهارتنا کۆدی' : language === 'Arabic' ? 'تغيير الكود / إلغاء' : 'Change Code'}
+                  </button>
+                </div>
+              </div>
+            )}
 
             <div className="grid grid-cols-2 gap-3" dir={isRtl ? 'rtl' : 'ltr'}>
                {[
@@ -630,10 +919,7 @@ const InfoModal = ({
               </div>
             </div>
 
-
-
-
-
+            {/* FIB Donation & Support Section */}
             <div className="bg-brand-accent/5 rounded-3xl p-6 border border-brand-accent/10 space-y-4">
                <p className="text-xs text-brand-text-muted text-center font-medium leading-relaxed">{t.supportMsg}</p>
                <div className="bg-black/20 rounded-2xl p-4 border border-white/5 text-center">
@@ -653,6 +939,8 @@ const InfoModal = ({
                   />
                </div>
             </div>
+
+            {/* Activation System Admin Section Removed */}
           </motion.div>
         </>
       )}
@@ -1063,7 +1351,11 @@ const TRANSLATIONS = {
     supportPhone: 'Telephone Support',
     supportPhoneDesc: 'For support via Phone call or WhatsApp chat, contact us directly.',
     clickToCall: 'Call Us Now',
-    clickToChat: 'WhatsApp Support'
+    clickToChat: 'WhatsApp Support',
+    advertiseHeader: '📢 Advertise on AMEDI TV & Skyrocket Your Business!',
+    advertiseText: 'Promote your Snapchat, shop, Youtube channel, or business here to reach tens of thousands of active viewers daily. Click to start earning together!',
+    contactToAdvertise: 'Advertise With Us',
+    supportUsWithFib: 'Support App (FIB)'
   },
   Kurdish: {
     home: 'سەرەکی',
@@ -1144,7 +1436,11 @@ const TRANSLATIONS = {
     supportPhone: 'پاڵپشتی تەلەفۆنی',
     supportPhoneDesc: 'بۆ پاڵپشتی لە ڕێگەی پەیوەندی تەلەفۆنی یان چاتی واتسئەپ، ڕاستەوخۆ پەیوەندیمان پێوە بکە.',
     clickToCall: 'پەیوەندی بکە',
-    clickToChat: 'واتسئەپی پاڵپشتی'
+    clickToChat: 'واتسئەپی پاڵپشتی',
+    advertiseHeader: '📢 ڕیکلام لە ئامێدی تیڤی بڵاوبکەرەوە و کارەکەت گەشەپێبدە!',
+    advertiseText: 'سناپچات، دوکان، کەناڵی یوتیوب یان بزنسەکەت لێرە بڵاوبکەرەوە بۆ گەیشتن بە دەیان هەزار بینەری چالاکی ڕۆژانە. کرتە بکە بۆ ڕیکلامی خێرا!',
+    contactToAdvertise: 'ڕیکلام لێرە بکە',
+    supportUsWithFib: 'پاڵپشتی دارایی (FIB)'
   },
   Badini: {
     home: 'سەرەکی',
@@ -1202,7 +1498,7 @@ const TRANSLATIONS = {
     updatingChannels: 'خەریکە کەنالێن نوێ وەردگریت...',
     websiteUpdateTitle: 'نووکرنا مالپەری بەرهەڤە',
     websiteUpdateDesc: 'وەشانەکێ نوێ یێ ئامێدی تیڤی ب دەست کەفت. نوکە نوژەن بکە بۆ دیتنا تایبەتمەندیێن نوێ.',
-    websiteUpdateBtn: 'نووکرن و دووبارە بارکرن',
+    websiteUpdateBtn: 'نووکرن ب دووبارە بارکرن',
     notificationSetup: 'ئاگەدارکرنان چالاک بکە',
     notificationSetupDesc: 'ئاگەدارکرن بۆ تە دێ هێن کاتێ کەنالێن نوێ یان نوژەنکرنێن مالپەری دبن.',
     notificationEnabled: 'ئاگەدارکرن هاتنە چالاککرن',
@@ -1225,13 +1521,13 @@ const TRANSLATIONS = {
     supportPhone: 'پشتەڤانیا تەلەفۆنێ',
     supportPhoneDesc: 'بۆ پشتەڤانیێ ب ڕێکارێن پەیوەندیا تەلەفۆنی یان کۆمێن واتسئەپ، ڕاستەوخۆ پەیوەندیێ مە بکە.',
     clickToCall: 'پەیوەندیێ بکە',
-    clickToChat: 'واتسئەپا پشتەڤانیێ'
+    clickToChat: 'واتسئەپا پشتەڤانیێ',
+    advertiseHeader: '📢 ریکلامێ ل سەر ئامێدی تیڤی بەلاڤبکە و کارێ خۆ گەشەپێبدە!',
+    advertiseText: 'سناپچات، کەنال، یان کارێ خۆ لێرە بەلاڤبکە بۆ گەهشتن ب ہزاران بینەرێن چالاک یێن رۆژانە. کلیک بکە بۆ دەستپێکرنا ریکلامێ!',
+    contactToAdvertise: 'ریکلامێ لێرە بکە',
+    supportUsWithFib: 'پشتەڤانیا دارایی (FIB)'
   },
   Arabic: {
-    home: 'الرئيسية',
-    language: 'اللغة',
-    search: 'بحث',
-    allChannels: 'جميع القنوات',
     noChannels: 'لم يتم العثور على قنوات في هذه الفئة',
     noStream: 'لا يوجد بث متاح لهذه القناة',
     searchPlaceholder: 'ابحث عن القنوات...',
@@ -1289,7 +1585,7 @@ const TRANSLATIONS = {
     notificationEnabled: 'الإشعارات مفعلة',
     notificationDisabled: 'الإشعارات معطلة',
     notificationAllowBtn: 'السماح بالتنبيهات',
-    notificationSuccessTitle: 'إشعارات أميدي تي في',
+    notificationSuccessTitle: 'إشهارات أميدي تي في',
     notificationSuccessDesc: 'ستتلقى الآن تنبيهات عندما يتم إضافة قنوات جديدة أو تحديثها!',
     systemStatus: 'النظام والإشعارات',
     appVersion: 'إصدار التطبيق',
@@ -1306,7 +1602,11 @@ const TRANSLATIONS = {
     supportPhone: 'الدعم الهاتفي',
     supportPhoneDesc: 'للحصول على الدعم عبر مكالمة هاتفية أو واتساب، تواصل معنا مباشرة.',
     clickToCall: 'اتصل بنا الآن',
-    clickToChat: 'دعم واتساب'
+    clickToChat: 'دعم واتساب',
+    advertiseHeader: '📢 روّج لأعمالك وقناتك وتواجدك على أميدي تي في!',
+    advertiseText: 'أعلن عن حسابك في سناب شات، متجرك، قناتك على يوتيوب، أو أعمالك التجارية هنا لتصل إلى عشرات الآلاف من المشاهدين النشطين يومياً.',
+    contactToAdvertise: 'أعلن معنا الآن',
+    supportUsWithFib: 'دعم التطبيق (FIB)'
   }
 };
 
@@ -1387,6 +1687,485 @@ const SplashScreen = ({ t }: { t: any; key?: string }) => {
     </motion.div>
   );
 };
+
+const ActivationScreen = ({ 
+  onActivateSuccess, 
+  language, 
+  setLanguage, 
+  t, 
+  isRtl 
+}: { 
+  onActivateSuccess: (plan: '1month' | '6months' | '1year') => void; 
+  language: Language; 
+  setLanguage: (lang: Language) => void; 
+  t: any; 
+  isRtl: boolean; 
+}) => {
+  const [activationCode, setActivationCode] = useState("");
+  const [validating, setValidating] = useState(false);
+  const [status, setStatus] = useState<{ type: 'idle' | 'success' | 'error'; message: string }>({ type: 'idle', message: '' });
+  const [showPayDetails, setShowPayDetails] = useState(true);
+  const [copiedAccount, setCopiedAccount] = useState(false);
+  const [selectedPeriod, setSelectedPeriod] = useState<'1month' | '6months' | '1year'>('6months');
+
+  const actText: { 
+    [key in Language]: { 
+      title: string; 
+      description: string; 
+      placeholder: string; 
+      button: string; 
+      contactLabel: string; 
+      successMsg: string; 
+      errorMsg: string;
+      payToGet: string;
+      payInstructions: string;
+      copyAccount: string;
+      copied: string;
+      orContact: string;
+      pricingTitle: string;
+      oneMonthLabel: string;
+      sixMonthsLabel: string;
+      oneYearLabel: string;
+      iqd: string;
+      selectPeriodPrompt: string;
+      selectedPlanLabel: string;
+      requiredAmountLabel: string;
+      activationStepCode: string;
+      haveCodeNotice: string;
+      activationSuccessNotice: string;
+    } 
+  } = {
+    English: {
+      title: "Activation Required",
+      description: "Please enter your activation code to unlock and access the premium channels. Activation ensures uninterrupted high-speed streaming.",
+      placeholder: "ENTER ACTIVE CODE...",
+      button: "Activate Now",
+      contactLabel: "Don't have an active code? Contact Savan Amedi",
+      successMsg: "Activated successfully! Enjoy watching Amedi TV.",
+      errorMsg: "Invalid activation code. Please try again or contact developer.",
+      payToGet: "💳 Pay via FIB to Get Code",
+      payInstructions: "Transfer the subscription code fee to our First Iraqi Bank (FIB) account below. Once paid, send the transaction screenshot to Savan Amedi on Snapchat to receive your code instantly.",
+      copyAccount: "Copy FIB Account ID",
+      copied: "Copied successfully! 🎉",
+      orContact: "Send screenshot on Snapchat:",
+      pricingTitle: "Subscription Pricing",
+      oneMonthLabel: "1 Month",
+      sixMonthsLabel: "6 Months",
+      oneYearLabel: "1 Year",
+      iqd: "IQD",
+      selectPeriodPrompt: "1. Specify subscription duration:",
+      selectedPlanLabel: "Selected Subscription Duration",
+      requiredAmountLabel: "Required Payment Amount",
+      activationStepCode: "2. Enter your activation code:",
+      haveCodeNotice: "Make sure you have your code before activating the subscription.",
+      activationSuccessNotice: "Once you have the code and complete the activation process, the subscription will be activated successfully.",
+    },
+    Kurdish: {
+      title: "چالاککردن پێویستە",
+      description: "تکایە کۆدی چالاککردنەکەت بنووسە بۆ کردنەوە و دەستگەیشتن بە کەناڵە نایابەکان. چالاککردن خێراییەکی بێپچڕان دابین دەکات.",
+      placeholder: "کۆدی چالاککردن لێرە بنووسە...",
+      button: "ئێستا چالاکی بکە",
+      contactLabel: "کۆدی چالاککردنت نییە؟ پەیوەندی بە ساڤان ئامێدی بکە",
+      successMsg: "بەسەرکەوتوویی چالاککرا! هیوای بینینێکی خۆش بۆ ئامێدی تیڤی.",
+      errorMsg: "کۆدی چالاککردنەکە هەڵەیە. تکایە دووبارە هەوڵبدەرەوە یان پەیوەندی بە گەشەپێدەر بکە.",
+      payToGet: "💳 پارەدان لە ڕێگەی FIB بۆ بەدەستهێنانی کۆد",
+      payInstructions: "بڕی پارەی بەشداریکردنەکە بنێرە بۆ ئەژمارەی فێست عێراق بانک (FIB) لە خوارەوە. پاش گواستنەوە، وێنەی شاشەی سەرکەوتووی پارەدانەکە (سکرینشۆت) بۆ ساڤان ئامێدی بنێرە لە ڕێگەی سناپچات بۆ وەرگرتنی کۆدەکە بە خێرایی.",
+      copyAccount: "کۆپیکردنی ژمارەی ئەژماری FIB",
+      copied: "بە سەرکەوتوویی کۆپی کرا! 🎉",
+      orContact: "وێنەی شاشەکە بنێرە بۆ سناپچاتی ساڤان:",
+      pricingTitle: "نرخی کۆدی چالاککردن",
+      oneMonthLabel: "١ مانگ",
+      sixMonthsLabel: "٦ مانگ",
+      oneYearLabel: "١ ساڵ",
+      iqd: "دینار",
+      selectPeriodPrompt: "١. ماوەی بەشداریکردن دیاری بکە:",
+      selectedPlanLabel: "ماوەی بەشداریکردنی هەڵبژێردراو",
+      requiredAmountLabel: "بڕی پارەی پێویست بۆ ناردن",
+      activationStepCode: "٢. کۆدی چالاککردنەکە لێرە بنووسە:",
+      haveCodeNotice: "تکایە دڵنیابەرەوە لەوەی کەکۆدی چالاککردنەکەت لایە پێش ئەوەی بەشداریکردنەکە چالاک بکەیت.",
+      activationSuccessNotice: "کاتێک کۆدەکەت دەستکەوت و پڕۆسەی چالاککردنەکەت تەواو کرد، بەشداریکردنەکەت بە سەرکەوتوویی چالاک دەبێت.",
+    },
+    Badini: {
+      title: "چالاککرن یا پێدڤییە",
+      description: "تکایە کۆدێ چالاککرنێ بنڤیسە بۆ ڤەکرن و دیتنا کەناڵێن نایاب. چالاککرن لایەنەکێ گرنگە بۆ دەستکەفتنا خێرایەکا مەزن.",
+      placeholder: "کۆدێ چالاککرنێ لێرە بنڤیسە...",
+      button: "نوکە چالاک بکە",
+      contactLabel: "کۆدێ چالاککرنێ ل دەف تە نینە؟ پەیوەندیێ ب ساڤان ئامێدی بکە",
+      successMsg: "ب سەرکەفتی هاتە چالاککرن! بینینەکا خۆش بۆ ئامێدی تیڤی.",
+      errorMsg: "کۆدێ چالاککرنێ خەلەتە. تکایە جارەکا دی تاقی بکە یان پەیوەندیێ ب گەشەپێدەر بکە.",
+      payToGet: "💳 پارەدان ب رێكا FIB بۆ وەرگرتنا کۆدی",
+      payInstructions: "بڕێ کۆژمێ پارەیێ پشکداریێ فرێکە بۆ سەر هەژمارا مە یا فێست عێراق بانک (FIB) ل خوارێ. پشتی فرێکرنێ، وێنەکێ شاشەیێ (سکرینشۆت) بۆ ساڤان ئامێدی فرێکە ل سەر سناپچاتی دا کۆدێ تە ب خێرایی بۆ تە بهێتە فرێکرن.",
+      copyAccount: "کۆپیکرنا ژمارا هەژمارا FIB",
+      copied: "ب سەرکەفتی هاتە کۆپیکرن! 🎉",
+      orContact: "وێنێ شاشەیێ بۆ سناپێ ساڤانی فرێکە:",
+      pricingTitle: "بهایێ کۆدێ چالاککرنێ",
+      oneMonthLabel: "١ هەیڤ",
+      sixMonthsLabel: "٦ هەیڤ",
+      oneYearLabel: "١ ساڵ",
+      iqd: "دینار",
+      selectPeriodPrompt: "١. ماوێ پشکداریا خۆ دەستنیشان بکە:",
+      selectedPlanLabel: "ماوێ پشکداریا دەستنیشانکری",
+      requiredAmountLabel: "کۆژمێ پارەیێ کەتێ پێدڤییە فڕێکەی",
+      activationStepCode: "٢. کۆدێ چالاککرنێ بنڤیسە:",
+      haveCodeNotice: "تکایە پشتراست بە کو تە کۆدێ چالاککرنێ ل دەف تە هەیە پێش هندێ تو پشکداریێ چالاک بکەی.",
+      activationSuccessNotice: "دەمێ کۆدێ خۆ تە وەرگرت و پڕۆسێسا چالاککرنێ ب دوماهی ئینا، پشکداریا تە دێ ب سەرکەفتی هێتە چالاککرن.",
+    },
+    Arabic: {
+      title: "مطلوب التفعيل",
+      description: "يرجى إدخال رمز التفعيل الخاص بك لفتح والوصول إلى القنوات المميزة. التفعيل يضمن لك بثاً فائق السرعة بدون انقطاع.",
+      placeholder: "أدخل رمز التفعيل هنا...",
+      button: "تفعيل الآن",
+      contactLabel: "ليس لديك رمز تفعيل؟ تواصل مع سافان أميدي",
+      successMsg: "تم التفعيل بنجاح! مشاهدة ممتعة على أوليمبياد وأميدي تي في.",
+      errorMsg: "رمز التفعيل غير صحيح. يرجى المحاولة مرة أخرى أو الاتصال بالمطور.",
+      payToGet: "💳 الدفع عبر FIB للحصول على الرمز",
+      payInstructions: "قم بتحويل رسوم الاشتراك إلى حساب المصرف العراقي الأول (FIB) الموضح أدناه. بعد إتمام الدفع، أرسل لقطة الشاشة إلى سافان أميدي على سناب شات للحصول على الرمز فوراً.",
+      copyAccount: "نسخ رقم حساب FIB",
+      copied: "تم النسخ بنجاح! 🎉",
+      orContact: "أرسل لقطة الشاشة إلى سناب شات المطور:",
+      pricingTitle: "أسعار كود التفعيل",
+      oneMonthLabel: "شهر واحد",
+      sixMonthsLabel: "٦ أشهر",
+      oneYearLabel: "سنة كاملة",
+      iqd: "د.ع",
+      selectPeriodPrompt: "١. اختر مدة الاشتراك المطلوبة:",
+      selectedPlanLabel: "مدة الاشتراك المحددة",
+      requiredAmountLabel: "المبلغ المطلوب تحويله إلى FIB",
+      activationStepCode: "٢. أدخل كود التفعيل الذي استلمته هنا:",
+      haveCodeNotice: "يرجى التأكد من أن لديك كود تفعيل خاص بك قبل تفعيل الاشتراك.",
+      activationSuccessNotice: "بمجرد حصولك على الكود وإتمام عملية التفعيل، سيتم تفعيل اشتراكك بنجاح.",
+    }
+  };
+
+  const currentAct = actText[language] || actText.English;
+
+  const handleActivate = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!activationCode.trim()) return;
+
+    setValidating(true);
+    setStatus({ type: 'idle', message: '' });
+
+    try {
+      const response = await fetch('/api/activation/validate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: activationCode })
+      });
+      const data = await response.json();
+
+      if (data.success) {
+        setStatus({ type: 'success', message: currentAct.successMsg });
+        try {
+          localStorage.setItem('amedi_tv_activated', 'true');
+          localStorage.setItem('amedi_tv_activated_plan', selectedPeriod);
+          localStorage.setItem('amedi_tv_activated_at', Date.now().toString());
+        } catch (_) {}
+        setTimeout(() => {
+          onActivateSuccess(selectedPeriod);
+        }, 1200);
+      } else {
+        setStatus({ type: 'error', message: currentAct.errorMsg });
+      }
+    } catch (err) {
+      console.error("Activation failure:", err);
+      setStatus({ type: 'error', message: "Connection lost. Please try again later." });
+    } finally {
+      setValidating(false);
+    }
+  };
+
+  const handleCopyFIB = async () => {
+    try {
+      await navigator.clipboard.writeText('P7AZPUOWHQFL');
+      setCopiedAccount(true);
+      setTimeout(() => setCopiedAccount(false), 2000);
+    } catch (err) {
+      console.warn("Failed to copy FIB text", err);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[90] bg-[#0c081c] flex flex-col items-center justify-center p-6 select-none overflow-y-auto no-scrollbar" dir={isRtl ? 'rtl' : 'ltr'}>
+      <div className="absolute inset-x-0 top-1/10 bottom-1/10 m-auto w-80 h-80 bg-brand-accent/10 blur-[130px] rounded-full pointer-events-none" />
+      <div className="absolute top-10 right-10 w-44 h-44 bg-purple-600/5 blur-[90px] rounded-full pointer-events-none" />
+      <div className="absolute bottom-10 left-10 w-44 h-44 bg-pink-500/5 blur-[90px] rounded-full pointer-events-none" />
+
+      <main className="w-full max-w-md bg-white/5 border border-white/5 backdrop-blur-xl rounded-[32px] p-6 md:p-8 flex flex-col items-center text-center shadow-[0_20px_60px_rgba(0,0,0,0.6)] relative z-10 my-8">
+        <div className="w-24 h-24 rounded-2xl overflow-hidden shadow-[0_0_35px_rgba(147,51,234,0.3)] border border-white/10 p-0.5 bg-[#17112d] flex items-center justify-center mb-6 relative group">
+          <img 
+            src="https://i.postimg.cc/QxGcmFd3/file-0000000004b47246b78b315ac6479e1d.png" 
+            alt="AMEDI TV Logo" 
+            className="w-full h-full object-cover rounded-[14px]" 
+            referrerPolicy="no-referrer" 
+          />
+        </div>
+
+        <h1 className="text-2xl font-black tracking-tight text-white uppercase italic leading-none mb-2">
+          AMEDI <span className="text-brand-accent">TV</span>
+        </h1>
+
+        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-brand-accent/10 border border-brand-accent/25 mb-5 text-[10px] font-black uppercase tracking-wider text-brand-accent">
+          <Key className="w-3 h-3" />
+          <span>SECURITY LOCK</span>
+        </div>
+
+        <h2 className="text-lg font-black text-white mb-2 leading-tight">
+          {currentAct.title}
+        </h2>
+
+        <p className="text-xs text-brand-text-muted leading-relaxed mb-6 px-1">
+          {currentAct.description}
+        </p>
+
+        {/* Dynamic Warning and success guide block */}
+        <div className="w-full bg-brand-accent/10 border border-brand-accent/20 rounded-2xl p-4 mb-6 text-start flex gap-3 items-start backdrop-blur-md relative overflow-hidden" dir={isRtl ? 'rtl' : 'ltr'}>
+          <div className="absolute top-0 right-0 w-24 h-24 bg-brand-accent/5 blur-xl rounded-full pointer-events-none" />
+          <div className="p-1.5 rounded-xl bg-brand-accent/20 text-brand-accent mt-0.5 shrink-0 flex items-center justify-center">
+            <Info className="w-4 h-4" />
+          </div>
+          <div className="flex flex-col gap-1 z-10">
+            <span className="text-[10px] font-black uppercase text-brand-accent tracking-wider">
+              {language === 'Kurdish' ? 'ڕێنمایی گرنگ' : language === 'Badini' ? 'رێنماییا گرنگ' : language === 'Arabic' ? 'تعليمات هامة' : 'Important Guide'}
+            </span>
+            <p className="text-xs font-black text-white leading-normal">
+              {currentAct.haveCodeNotice}
+            </p>
+            <p className="text-[10.5px] text-brand-text-muted font-medium leading-relaxed mt-1">
+              {currentAct.activationSuccessNotice}
+            </p>
+          </div>
+        </div>
+
+        <form onSubmit={handleActivate} className="w-full flex flex-col gap-3">
+          <div className="text-left" dir={isRtl ? 'rtl' : 'ltr'}>
+            <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">
+              {currentAct.activationStepCode}
+            </span>
+          </div>
+          <div className="relative">
+            <input
+              type="text"
+              value={activationCode}
+              onChange={(e) => {
+                setActivationCode(e.target.value);
+                if (status.type !== 'idle') setStatus({ type: 'idle', message: '' });
+              }}
+              placeholder={currentAct.placeholder}
+              className="w-full bg-black/40 border border-white/10 focus:outline-none focus:border-brand-accent/60 rounded-2xl py-3 px-4 text-xs font-mono text-center text-white tracking-widest placeholder-white/20 uppercase transition-all"
+              autoFocus
+              disabled={validating}
+            />
+          </div>
+
+          <button
+            type="submit"
+            disabled={validating || !activationCode.trim()}
+            className="w-full py-3.5 rounded-2xl bg-brand-accent hover:bg-purple-700 disabled:opacity-40 text-white font-black text-xs tracking-widest uppercase transition-all shadow-lg shadow-brand-accent/10 active:scale-[0.98] cursor-pointer animate-none"
+          >
+            {validating ? (
+              <span className="flex items-center justify-center gap-2">
+                <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                <span>VALIDATING...</span>
+              </span>
+            ) : (
+              currentAct.button
+            )}
+          </button>
+        </form>
+
+        {status.type !== 'idle' && (
+          <div className={`w-full mt-4 p-3 rounded-xl border text-[11px] font-black leading-snug ${
+            status.type === 'success' 
+              ? 'bg-green-500/10 border-green-500/20 text-green-400' 
+              : 'bg-red-500/10 border-red-500/20 text-red-400'
+          }`}>
+            {status.message}
+          </div>
+        )}
+
+        {/* Dynamic active code payment area */}
+        <div className="w-full mt-6 border-t border-white/5 pt-5 text-left" dir={isRtl ? 'rtl' : 'ltr'}>
+          <button
+            onClick={() => setShowPayDetails(!showPayDetails)}
+            className="w-full flex items-center justify-between py-2 text-xs font-black uppercase text-brand-accent hover:text-white/80 cursor-pointer animate-none bg-transparent"
+          >
+            <span>{currentAct.payToGet}</span>
+            <span className="text-[10px] transform transition-transform duration-200" style={{ transform: showPayDetails ? "rotate(180deg)" : "rotate(0deg)" }}>▼</span>
+          </button>
+
+          {showPayDetails && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              className="mt-3 bg-black/30 md:bg-black/40 rounded-2xl p-4 border border-white/5 flex flex-col gap-4 overflow-hidden"
+            >
+              <p className="text-[11px] text-brand-text-muted leading-relaxed">
+                {currentAct.payInstructions}
+              </p>
+
+              {/* Subscription Pricing Grid */}
+              <div className="flex flex-col gap-2 mt-1">
+                <span className="text-[10px] font-black uppercase text-brand-accent tracking-wider block text-center mb-1">
+                  {currentAct.selectPeriodPrompt}
+                </span>
+                <div className="grid grid-cols-3 gap-2">
+                  {/* 1 Month */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedPeriod('1month');
+                      if (status.type !== 'idle') setStatus({ type: 'idle', message: '' });
+                    }}
+                    className={`rounded-xl p-2.5 flex flex-col items-center justify-center text-center backdrop-blur-md relative overflow-hidden group transition-all cursor-pointer border ${
+                      selectedPeriod === '1month'
+                        ? 'bg-brand-accent/20 border-brand-accent shadow-[0_0_15px_rgba(147,51,234,0.3)]'
+                        : 'bg-white/5 border-white/10 hover:border-white/35 hover:bg-white/10 text-white/60'
+                    }`}
+                  >
+                    <span className="text-[10px] font-bold block text-white/95">
+                      {currentAct.oneMonthLabel}
+                    </span>
+                    <span className="text-sm font-black mt-1 text-white">5,000</span>
+                    <span className="text-[8px] font-semibold leading-none text-slate-400">
+                      {currentAct.iqd}
+                    </span>
+                  </button>
+
+                  {/* 6 Months */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedPeriod('6months');
+                      if (status.type !== 'idle') setStatus({ type: 'idle', message: '' });
+                    }}
+                    className={`rounded-xl p-2.5 flex flex-col items-center justify-center text-center backdrop-blur-md relative overflow-hidden group transition-all cursor-pointer border ${
+                      selectedPeriod === '6months'
+                        ? 'bg-[#1e133d]/60 border-brand-accent shadow-[0_0_20px_rgba(147,51,234,0.4)] ring-1 ring-brand-accent/30'
+                        : 'bg-white/5 border-white/10 hover:border-white/35 hover:bg-white/10 text-white/60'
+                    }`}
+                  >
+                    <div className="absolute top-0 right-0 bg-brand-accent text-white text-[7px] font-black uppercase px-1 leading-none py-0.5 rounded-bl-lg">
+                      🔥
+                    </div>
+                    <span className="text-[10px] font-bold block text-brand-accent">
+                      {currentAct.sixMonthsLabel}
+                    </span>
+                    <span className="text-sm font-black mt-1 text-brand-accent">15,000</span>
+                    <span className="text-[8px] font-semibold leading-none text-brand-accent">
+                      {currentAct.iqd}
+                    </span>
+                  </button>
+
+                  {/* 1 Year */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedPeriod('1year');
+                      if (status.type !== 'idle') setStatus({ type: 'idle', message: '' });
+                    }}
+                    className={`rounded-xl p-2.5 flex flex-col items-center justify-center text-center backdrop-blur-md relative overflow-hidden group transition-all cursor-pointer border ${
+                      selectedPeriod === '1year'
+                        ? 'bg-amber-500/10 border-amber-500/70 shadow-[0_0_15px_rgba(245,158,11,0.2)]'
+                        : 'bg-white/5 border-white/10 hover:border-white/35 hover:bg-white/10 text-white/60'
+                    }`}
+                  >
+                    <div className="absolute top-0 right-0 bg-amber-500 text-slate-950 text-[6px] font-black uppercase px-1 leading-none py-0.5 rounded-bl-lg">
+                      BEST
+                    </div>
+                    <span className="text-[10px] font-bold block text-amber-400">
+                      {currentAct.oneYearLabel}
+                    </span>
+                    <span className="text-sm font-black mt-1 text-amber-400">20,000</span>
+                    <span className="text-[8px] font-semibold leading-none text-amber-400">
+                      {currentAct.iqd}
+                    </span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Selection Feedback Panel */}
+              <div className="bg-[#1a1433]/70 border border-white/5 rounded-2xl p-3 flex flex-col gap-2">
+                <div className="flex justify-between items-center bg-black/40 border border-white/5 rounded-xl px-3 py-2 text-left">
+                  <div className="flex flex-col">
+                    <span className="text-[9px] font-bold text-white/40 uppercase tracking-wider">{currentAct.selectedPlanLabel}</span>
+                    <span className="text-xs font-black text-white mt-0.5">
+                      {selectedPeriod === '1month' ? currentAct.oneMonthLabel : selectedPeriod === '6months' ? currentAct.sixMonthsLabel : currentAct.oneYearLabel}
+                    </span>
+                  </div>
+                  <div className="flex flex-col items-end">
+                    <span className="text-[9px] font-bold text-white/40 uppercase tracking-wider">{currentAct.requiredAmountLabel}</span>
+                    <span className="text-sm font-black text-emerald-400 mt-0.5 flex items-baseline gap-0.5">
+                      {selectedPeriod === '1month' ? '5,000' : selectedPeriod === '6months' ? '15,000' : '20,000'}
+                      <span className="text-[9px] font-bold text-slate-400">{currentAct.iqd}</span>
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white/5 rounded-xl p-3 border border-white/5 text-center flex flex-col items-center justify-center gap-1">
+                <span className="text-[9px] text-brand-accent uppercase tracking-widest font-black">FIB Account Number</span>
+                <span className="text-sm font-black text-white tracking-wider font-mono">P7AZPUOWHQFL</span>
+                <span className="text-[10px] text-white/40 font-bold uppercase shrink-0">Savan Amedi</span>
+                <button
+                  type="button"
+                  onClick={handleCopyFIB}
+                  className="mt-2 text-[10px] font-black uppercase tracking-wider bg-white/10 hover:bg-white/20 active:scale-95 text-white/90 rounded-lg px-3 py-1.5 cursor-pointer border border-white/5"
+                >
+                  {copiedAccount ? currentAct.copied : currentAct.copyAccount}
+                </button>
+              </div>
+
+              <div className="w-28 h-28 mx-auto bg-white rounded-xl p-1.5 flex items-center justify-center border border-white/10">
+                <img 
+                  src="https://i.postimg.cc/J0Y5zQCz/IMG-20260518-053546.jpg" 
+                  alt="FIB QR Code For Payments" 
+                  className="w-full h-full object-contain"
+                  referrerPolicy="no-referrer"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = 'https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=P7AZPUOWHQFL';
+                  }}
+                />
+              </div>
+
+              <div className="flex flex-col items-center gap-2 mt-1 border-t border-white/5 pt-3">
+                <span className="text-[10px] font-bold text-white/60">{currentAct.orContact}</span>
+                <a
+                  href="https://www.snapchat.com/add/savan10.ten?share_id=P_WZNoKBOyw&locale=en-US"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 text-xs font-black uppercase tracking-wider text-white hover:text-brand-accent px-4 py-2 bg-yellow-400 hover:bg-yellow-500 rounded-xl transition-all shadow-md text-slate-900 shadow-yellow-500/10 cursor-pointer"
+                >
+                  <span className="w-2 h-2 bg-red-500 rounded-full animate-ping shrink-0" />
+                  <span>Savan Snapchat 💬</span>
+                  <ExternalLink className="w-3.5 h-3.5 shrink-0" />
+                </a>
+              </div>
+            </motion.div>
+          )}
+        </div>
+
+        <div className="flex flex-row flex-wrap justify-center gap-2.5 border-t border-white/5 pt-5 mt-6 w-full">
+          {(['English', 'Kurdish', 'Badini', 'Arabic'] as Language[]).map((lang) => (
+            <button
+              key={lang}
+              type="button"
+              onClick={() => setLanguage(lang)}
+              className={`px-3 py-1.5 rounded-xl text-[10px] font-black tracking-wider uppercase transition-all cursor-pointer ${
+                language === lang 
+                  ? 'bg-white/10 text-white border border-white/10' 
+                  : 'bg-transparent text-white/30 hover:text-white/60 border border-transparent'
+              }`}
+            >
+              {lang}
+            </button>
+          ))}
+        </div>
+      </main>
+    </div>
+  );
+};
+
 
 export default function App() {
   const [language, setLanguage] = useState<Language>(() => {
@@ -1606,6 +2385,117 @@ export default function App() {
 
   const [channels, setChannels] = useState<Channel[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [adsConfig, setAdsConfig] = useState<any>({
+    adsEnabled: true,
+    adSenseEnabled: false,
+    adSenseClientId: "",
+    adSenseSlotId: "",
+    customBannerActive: true,
+    customBanners: [
+      {
+        id: "ad-banner-1",
+        image: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=1964&auto=format&fit=crop",
+        url: "https://www.snapchat.com/add/savan10.ten?share_id=P_WZNoKBOyw&locale=en-US",
+        title: "AMEDI TV Sponsor Banner Slot!",
+        desc: "Sponsor or display your business, website, or social media handle here. Dynamically configured with Google AdSense and custom graphic rotation. Tap/Click to contact Savan Amedi!"
+      }
+    ],
+    placements: {
+      belowCategories: true,
+      insidePlayer: true
+    }
+  });
+
+  const handleSaveAdsConfig = async (newConfig: any) => {
+    try {
+      const response = await fetch('/api/ads', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(newConfig)
+      });
+      if (response.ok) {
+        setAdsConfig(newConfig);
+        return true;
+      }
+    } catch (err) {
+      console.error('Failed to programmatic update ads settings:', err);
+    }
+    return false;
+  };
+
+  const [activationConfig, setActivationConfig] = useState<{ requireActivation: boolean; validCodes: string[] }>({
+    requireActivation: true,
+    validCodes: ["AMEDI2029", "SAVAN10", "ACTIVE-TV"]
+  });
+
+  const [activatedPeriod, setActivatedPeriod] = useState<'1month' | '6months' | '1year'>(() => {
+    try {
+      const plan = localStorage.getItem('amedi_tv_activated_plan');
+      if (plan === '1month' || plan === '6months' || plan === '1year') {
+        return plan as any;
+      }
+    } catch (_) {}
+    return '6months';
+  });
+
+  const [activatedAt, setActivatedAt] = useState<number>(() => {
+    try {
+      const atStr = localStorage.getItem('amedi_tv_activated_at');
+      if (atStr) return parseInt(atStr, 10);
+    } catch (_) {}
+    return Date.now();
+  });
+
+  const [isActivated, setIsActivated] = useState<boolean>(() => {
+    try {
+      const isAct = localStorage.getItem('amedi_tv_activated') === 'true';
+      if (!isAct) return false;
+
+      const atStr = localStorage.getItem('amedi_tv_activated_at');
+      const plan = localStorage.getItem('amedi_tv_activated_plan') || '6months';
+      if (!atStr) return true; // fallback for pre-existing activations
+
+      const at = parseInt(atStr, 10);
+      let durationDays = 180;
+      if (plan === '1month') durationDays = 30;
+      else if (plan === '1year') durationDays = 365;
+
+      const expirationTime = at + (durationDays * 24 * 60 * 60 * 1000);
+      const isExpired = Date.now() > expirationTime;
+
+      if (isExpired) {
+        localStorage.removeItem('amedi_tv_activated');
+        localStorage.removeItem('amedi_tv_activated_plan');
+        localStorage.removeItem('amedi_tv_activated_at');
+        return false;
+      }
+      return true;
+    } catch (_) {
+      return false;
+    }
+  });
+
+  const handleSaveActivationConfig = async (newConfig: { requireActivation: boolean; validCodes: string[] }) => {
+    try {
+      const response = await fetch('/api/admin/activation-config', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(newConfig)
+      });
+      if (response.ok) {
+        setActivationConfig(newConfig);
+        return true;
+      }
+    } catch (err) {
+      console.error('Failed to update activation configuration:', err);
+    }
+    return false;
+  };
+
   const [currentVersion, setCurrentVersion] = useState<string>('');
   const [isSyncing, setIsSyncing] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -1718,6 +2608,30 @@ export default function App() {
       }
     };
 
+    const onAdsConfigUpdated = (e: MessageEvent) => {
+      try {
+        const data = JSON.parse(e.data);
+        if (data.config) {
+          setAdsConfig(data.config);
+          console.log('[SSE] Ads configurations modified by admin in real-time!', data.config);
+        }
+      } catch (err) {
+        console.error('[SSE] Error processing ads-config-updated:', err);
+      }
+    };
+
+    const onActivationConfigUpdated = (e: MessageEvent) => {
+      try {
+        const data = JSON.parse(e.data);
+        if (data.config) {
+          setActivationConfig(data.config);
+          console.log('[SSE] Activation configurations modified by admin in real-time!', data.config);
+        }
+      } catch (err) {
+        console.error('[SSE] Error processing activation-config-updated:', err);
+      }
+    };
+
     eventSource.onerror = () => {
       // Quiet down standard automatic reconnections to ensure console remains pristine
       if (eventSource.readyState === EventSource.CONNECTING) {
@@ -1730,11 +2644,15 @@ export default function App() {
     eventSource.addEventListener('channel-added', onAdded as any);
     eventSource.addEventListener('channel-updated', onUpdated as any);
     eventSource.addEventListener('custom-announcement', onCustomAnnouncement as any);
+    eventSource.addEventListener('ads-config-updated', onAdsConfigUpdated as any);
+    eventSource.addEventListener('activation-config-updated', onActivationConfigUpdated as any);
 
     return () => {
       eventSource.removeEventListener('channel-added', onAdded as any);
       eventSource.removeEventListener('channel-updated', onUpdated as any);
       eventSource.removeEventListener('custom-announcement', onCustomAnnouncement as any);
+      eventSource.removeEventListener('ads-config-updated', onAdsConfigUpdated as any);
+      eventSource.removeEventListener('activation-config-updated', onActivationConfigUpdated as any);
       eventSource.close();
     };
   }, [language]);
@@ -2060,6 +2978,26 @@ export default function App() {
 
     async function loadData() {
       try {
+        const adsRes = await fetch('/api/ads');
+        if (adsRes.ok) {
+          const adsData = await adsRes.json();
+          setAdsConfig(adsData);
+        }
+      } catch (err) {
+        console.warn('Failed to load initial ads configuration:', err);
+      }
+
+      try {
+        const actRes = await fetch('/api/admin/activation-config');
+        if (actRes.ok) {
+          const actData = await actRes.json();
+          setActivationConfig(actData);
+        }
+      } catch (err) {
+        console.warn('Failed to load initial activation configuration:', err);
+      }
+
+      try {
         const response = await fetch('/api/channels');
         if (response.ok) {
           const data = await response.json();
@@ -2172,6 +3110,36 @@ export default function App() {
           <div className="w-16 h-16 border-4 border-brand-accent border-t-transparent rounded-full animate-spin" />
           <p className="font-bold uppercase tracking-widest text-xs opacity-50">{t.initializingServer}</p>
         </div>
+      </div>
+    );
+  }
+
+  if (activationConfig.requireActivation && !isActivated) {
+    return (
+      <div dir={isRtl ? "rtl" : "ltr"} className="min-h-screen relative bg-brand-bg overflow-x-hidden selection:bg-brand-accent/30">
+        <AnimatePresence>
+          {showSplash && <SplashScreen key="splash-screen" t={t} />}
+        </AnimatePresence>
+        {!showSplash && (
+          <ActivationScreen
+            onActivateSuccess={(plan) => {
+              setIsActivated(true);
+              setActivatedPeriod(plan);
+              setActivatedAt(Date.now());
+            }}
+            language={language}
+            setLanguage={(lang) => {
+              setLanguage(lang);
+              try {
+                localStorage.setItem('language', lang);
+              } catch (e) {
+                console.warn("localStorage block:", e);
+              }
+            }}
+            t={t}
+            isRtl={isRtl}
+          />
+        )}
       </div>
     );
   }
@@ -2323,6 +3291,8 @@ export default function App() {
             onSelectChannel={setSelectedChannel}
             t={t}
             allChannels={channels}
+            adsConfig={adsConfig}
+            isRtl={isRtl}
           />
         )}
       </AnimatePresence>
@@ -2361,6 +3331,22 @@ export default function App() {
           try {
             localStorage.setItem('tvModeEnabled', String(nextVal));
           } catch (_) {}
+        }}
+        adsConfig={adsConfig}
+        onSaveAdsConfig={handleSaveAdsConfig}
+        activationConfig={activationConfig}
+        onSaveActivationConfig={handleSaveActivationConfig}
+        isActivated={isActivated}
+        activatedPeriod={activatedPeriod}
+        activatedAt={activatedAt}
+        onDeactivate={() => {
+          try {
+            localStorage.removeItem('amedi_tv_activated');
+            localStorage.removeItem('amedi_tv_activated_plan');
+            localStorage.removeItem('amedi_tv_activated_at');
+          } catch (_) {}
+          setIsActivated(false);
+          setInfoModalOpen(false);
         }}
       />
 
