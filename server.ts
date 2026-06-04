@@ -60,7 +60,7 @@ try {
 const activationConfigPath = path.join(process.cwd(), "activation_config.json");
 let activationConfig = {
   requireActivation: true,
-  validCodes: ["AMEDI2029", "SAVAN10", "ACTIVE-TV"]
+  validCodes: ["2030", "AMEDI2030", "AMEDI2029", "SAVAN10", "ACTIVE-TV"]
 };
 
 try {

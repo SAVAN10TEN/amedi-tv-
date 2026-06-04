@@ -1,6 +1,8 @@
 {
   "requireActivation": true,
   "validCodes": [
+    "2030",
+    "AMEDI2030",
     "AMEDI2029",
     "SAVAN10",
     "ACTIVE-TV"
