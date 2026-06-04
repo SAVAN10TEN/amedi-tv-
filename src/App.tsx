@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'motion/react';
-import { Search, Globe, Home, Info, X, ChevronLeft, LayoutGrid, MonitorPlay, Cast, Play, Download, Smartphone, RefreshCw, Sparkles, Bell, BellOff, Share, Compass, Plus, Tv, Megaphone, Phone, MessageCircle, Ghost, Youtube, Instagram, Music2, Key, ExternalLink, Check } from 'lucide-react';
+import { Search, Globe, Home, Info, X, ChevronLeft, LayoutGrid, MonitorPlay, Cast, Play, Download, Smartphone, RefreshCw, Sparkles, Bell, BellOff, Share, Compass, Plus, Tv, Megaphone, Phone, MessageCircle, Ghost, Youtube, Instagram, Music2, Key, ExternalLink, Check, Lock, CheckCircle } from 'lucide-react';
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import Hls from 'hls.js';
 import { Category, Language, Channel } from './types';
@@ -1279,13 +1279,13 @@ const TRANSLATIONS = {
     allChannels: 'All Channels',
     noChannels: 'No channels found in this category',
     noStream: 'No stream available for this channel',
-    searchPlaceholder: 'Search channels...',
+    searchPlaceholder: 'Search for channels...',
     supportMsg: 'You can support us by donating to this FIB account:',
     selectLang: 'Select Language',
     playbackError: 'Playback Error',
     reconnect: 'Reconnect',
     selectLanguage: 'Select Language',
-    appTitle: 'AMEDI TV',
+    appTitle: 'Amedi TV',
     socialFollow: 'Snapchat',
     socialTikTok: 'TikTok',
     socialYoutube: 'YouTube',
@@ -1304,17 +1304,17 @@ const TRANSLATIONS = {
     categoryKids: 'Kids',
     liveNow: 'Live Now',
     openLink: 'Open Link',
-    welcomeDesc: 'Welcome to Amedi TV to watch Kurdish, international, Arabic, and sports channels live',
+    welcomeDesc: 'Welcome to Amedi TV to watch live Kurdish, International, Arabic, and Sports channels',
     initializing: 'Initializing',
     networkOnline: 'Network Online',
     initializingServer: 'Initializing Server...',
-    castDevice: 'Cast to Device',
+    castDevice: 'Cast to device',
     installApp: 'Install App',
-    installAppDesc: 'Install AMEDI TV on your device for a fast, immersive viewing experience.',
-    installInstructions: 'To install this application on your iOS device, tap the Share button in Safari, then select "Add to Home Screen".',
+    installAppDesc: 'Install Amedi TV app on your device for a fast and smooth experience.',
+    installInstructions: 'To install this app on an iOS device (iPhone), tap the Share button in Safari, then select "Add to Home Screen".',
     close: 'Close',
     addChannel: 'Add Channel',
-    addChannelDesc: 'Add a new Kurdish or international live television channel.',
+    addChannelDesc: 'Add a new Kurdish or international TV channel.',
     channelName: 'Channel Name',
     streamUrl: 'Stream URL (HLS .m3u8)',
     logoUrl: 'Logo URL (Image Link)',
@@ -1322,40 +1322,40 @@ const TRANSLATIONS = {
     adding: 'Adding...',
     addedSuccess: 'Channel added successfully!',
     validationError: 'Please fill in all fields with valid values',
-    updateBannerTitle: 'Channel Updates Ready',
-    updateBannerDesc: 'New channels have been added to the network. Update now to watch them!',
-    updateNow: 'Update Now',
-    updatingChannels: 'Syncing satellite receivers...',
+    updateBannerTitle: 'New Channels Ready',
+    updateBannerDesc: 'New channels have been added. Update now to watch them!',
+    updateNow: 'Update Network',
+    updatingChannels: 'Updating Channels and Frequencies...',
     websiteUpdateTitle: 'Website Update Available',
-    websiteUpdateDesc: 'An update for AMEDI TV is ready. Apply it to get the newest features and streams.',
-    websiteUpdateBtn: 'Reload & Update',
+    websiteUpdateDesc: 'A new version of Amedi TV is available. Please update to experience the new features.',
+    websiteUpdateBtn: 'Update and Reload',
     notificationSetup: 'Enable Notifications',
-    notificationSetupDesc: 'Get alerts when new channels are added or critical website updates occur.',
+    notificationSetupDesc: 'Subscribe to receive alerts when new channels or website updates are available.',
     notificationEnabled: 'Notifications Enabled',
     notificationDisabled: 'Notifications Disabled',
-    notificationAllowBtn: 'Allow Alerts',
+    notificationAllowBtn: 'Allow Notifications',
     notificationSuccessTitle: 'Amedi TV Notifications',
-    notificationSuccessDesc: 'You will now receive alerts whenever channels are added or updated!',
-    systemStatus: 'System & Notifications',
+    notificationSuccessDesc: 'We will now notify you when new channels are added or updated!',
+    systemStatus: 'System Status and Updates',
     appVersion: 'App Version',
     checkUpdates: 'Check for Updates',
     checking: 'Checking...',
-    upToDate: 'App is Up to Date',
-    updateReady: 'New Update Available!',
-    deviceModeTV: 'Smart TV Mode',
-    deviceModePhone: 'Mobile Phone Mode',
-    deviceModeAuto: 'Auto Optimize',
-    deviceSelectorLabel: 'Screen Optimization',
-    tvRemoteGuide: 'TV REMOTE SYSTEM ACTIVE: Use Arrows [↑ / ↓ / ← / →] to navigate, [Enter] to play, [Backspace/Esc] to go back.',
-    phoneGestureGuide: 'Mobile Mode: Swipe left/right on player screen to quickly flip channels!',
-    supportPhone: 'Telephone Support',
-    supportPhoneDesc: 'For support via Phone call or WhatsApp chat, contact us directly.',
-    clickToCall: 'Call Us Now',
+    upToDate: 'The app is up to date',
+    updateReady: 'New Update Ready!',
+    deviceModeTV: 'TV Mode',
+    deviceModePhone: 'Phone Mode',
+    deviceModeAuto: 'Auto Mode',
+    deviceSelectorLabel: 'Display Mode Settings',
+    tvRemoteGuide: 'TV remote control enabled: use arrow keys to navigate, [Enter] to select, [Backspace/Esc] to go back.',
+    phoneGestureGuide: 'Phone gestures: swipe on video to change channel quickly!',
+    supportPhone: 'Phone Support and Help',
+    supportPhoneDesc: 'For help via phone or our WhatsApp groups contact us directly.',
+    clickToCall: 'Call Us',
     clickToChat: 'WhatsApp Support',
-    advertiseHeader: '📢 Advertise on AMEDI TV & Skyrocket Your Business!',
-    advertiseText: 'Promote your Snapchat, shop, Youtube channel, or business here to reach tens of thousands of active viewers daily. Click to start earning together!',
-    contactToAdvertise: 'Advertise With Us',
-    supportUsWithFib: 'Support App (FIB)'
+    advertiseHeader: '📢 Advertise on Amedi TV!',
+    advertiseText: 'Advertise your Snapchat, store, YouTube, or business here to reach thousands of active viewers. Click to start!',
+    contactToAdvertise: 'Advertise Here',
+    supportUsWithFib: 'Support Us with FIB'
   },
   Kurdish: {
     home: 'سەرەکی',
@@ -1438,23 +1438,23 @@ const TRANSLATIONS = {
     clickToCall: 'پەیوەندی بکە',
     clickToChat: 'واتسئەپی پاڵپشتی',
     advertiseHeader: '📢 ڕیکلام لە ئامێدی تیڤی بڵاوبکەرەوە و کارەکەت گەشەپێبدە!',
-    advertiseText: 'سناپچات، دوکان، کەناڵی یوتیوب یان بزنسەکەت لێرە بڵاوبکەرەوە بۆ گەیشتن بە دەیان هەزار بینەری چالاکی ڕۆژانە. کرتە بکە بۆ ڕیکلامی خێرا!',
-    contactToAdvertise: 'ڕیکلام لێرە بکە',
-    supportUsWithFib: 'پاڵپشتی دارایی (FIB)'
+    advertiseText: 'سناپچات، دوکان، کەناڵی یوتیوب یان بزنسەکەت لێرە بڵاوبکەرەوە بۆ گەیشتن بە دەیان هەزار بینەری چالاکی ڕۆژانە. کرتە بکە بۆ ڕیکلام کردن',
+    contactToAdvertise: 'ڕیکلام لەگەڵ ئێمە',
+    supportUsWithFib: 'پاڵپشتی ئەپ (FIB)'
   },
   Badini: {
     home: 'سەرەکی',
     language: 'زمان',
-    search: 'گەڕیان',
-    allChannels: 'هەمی کەناڵ',
+    search: 'گەڕان',
+    allChannels: 'هەموو کەناڵەکان',
     noChannels: 'چ کەناڵ نەهاتنە دیتن د ڤی بەشی دا',
     noStream: 'چ پەخش نینە بۆ ڤی کەناڵی',
-    searchPlaceholder: 'ل کەناڵان بگەڕیێ...',
-    supportMsg: 'تو دشێی پشکداریێ د پشتەڤانییا مە دا بکەی ب رێکا ڤی هەژمارا FIB:',
-    selectLang: 'زمانەکێ هەلبژێرە',
-    playbackError: 'خەلەتیا پەخشێ',
-    reconnect: 'دوبارە گرێدان',
-    selectLanguage: 'زمانەکی هەلبژێرە',
+    searchPlaceholder: 'بگەڕە بۆ کەناڵان...',
+    supportMsg: 'تو دکۆدی هاوکاریا مە بکەی ب بەخشینێ بۆ ڤی ئەژمارا FIB:',
+    selectLang: 'زمان هەلبژێره',
+    playbackError: 'خەلەتی د پەخشی دا',
+    reconnect: 'دووبارە گرێدان',
+    selectLanguage: 'زمان هەلبژێره',
     appTitle: 'ئامێدی تیڤی',
     socialFollow: 'سناپ چات',
     socialTikTok: 'تیکتۆک',
@@ -1462,76 +1462,80 @@ const TRANSLATIONS = {
     socialInstagram: 'ئینستاگرام',
     donorName: 'ساڤان ئامێدی',
     donorAccount: 'P7AZPUOWHQFL',
-    categoryAll: 'هەمی',
+    categoryAll: 'هەموو',
     categoryKurdish: 'کوردی',
     categoryArabic: 'عەرەبی',
     categoryGeneral: 'گشتی',
-    categoryNews: 'نووچە',
+    categoryNews: 'هەواڵ',
     categorySports: 'وەرزش',
     categoryMovies: 'فیلم',
     categoryRadio: 'ڕادیۆ',
     categoryIslamic: 'ئیسلامی',
-    categoryKids: 'زارۆک',
+    categoryKids: 'منداڵان',
     liveNow: 'پەخشێ ڕاستەوخۆ',
     openLink: 'ڤەکرنا لینکی',
-    welcomeDesc: 'بخێر بهێن بو ئامێدی تیڤی بو بەرێ خودانا کەنالێن کوردی و بیانی و عەرەبی و وەرزشی ب شێوازێ راستەوخو',
+    welcomeDesc: 'بخێر بێن بۆ ئامێدی تیڤی بۆ دیتنا کەناڵێن کوردی، بیانی، عەرەبي و وەرزشي یێن ڕاستەوخۆ',
     initializing: 'دەستپێکرن',
-    networkOnline: 'تۆڕ یا کارایە',
+    networkOnline: 'تۆڕ یا چالاکە',
     initializingServer: 'ل هەمبەر ئامادەکرنا سێرڤەری...',
-    castDevice: 'گرێدانا ئامێری',
+    castDevice: 'شاندن بۆ ئامێرێ دی',
     installApp: 'داگرتنا ئەپی',
-    installAppDesc: 'ئەپێ ئامێدی تیڤی دابەزینە سەر ئامیرێ خۆ بو دیتنەکا بلەز و تمام.',
-    installInstructions: 'بۆ دابەزاندنا ڤی ئەپی ل سەر ئامیرێ iOS (ئایفۆن)، دوگمەیا Share ل Safari دابگرە، پاشان "Add to Home Screen" هەلبژێرە.',
+    installAppDesc: 'ئەپا ئامێدی تیڤی دابەزینە سەر ئامیرێ خۆ بۆ دیتنەکا بێ ئاریشە.',
+    installInstructions: 'بۆ دابەزاندنا ڤی ئەپی ل سەر ئامیرێن iOS (ئایفۆن)، دوگمەیا Share ل سەر Safari دابگرە، پاشان "Add to Home Screen" هەلبژێره.',
     close: 'داخستن',
-    addChannel: 'زێدەکرنا کەنالی',
-    addChannelDesc: 'کەنالەکێ تەلەفزیۆنیێ کوردی یان بیانی یێ نوێ زێدە بکە.',
-    channelName: 'ناڤێ کەنالی',
-    streamUrl: 'لینکێ پەخشێ (HLS .m3u8)',
-    logoUrl: 'لینکێ لۆگۆیی (لینکێ وێنەی)',
-    selectCategories: 'فۆڵدەر و هۆپۆلان دەستنیشان بکە',
-    adding: 'خەریکە زێدە دکەت...',
-    addedSuccess: 'کەنال ب سەرکەفتیانە هاتە زێدەکرن!',
-    validationError: 'هیڤی دکەین هەمی خانەیان ب دروستی پر بکەن',
-    updateBannerTitle: 'کەنالێن نوێ بەرهەڤن',
-    updateBannerDesc: 'کەنالێن د نوێ بۆ تورا مە هاتینە زێدەکرن. نوکە نوژەن بکە بۆ دیتنێ!',
-    updateNow: 'نوکە نوژەن بکە',
-    updatingChannels: 'خەریکە کەنالێن نوێ وەردگریت...',
-    websiteUpdateTitle: 'نووکرنا مالپەری بەرهەڤە',
-    websiteUpdateDesc: 'وەشانەکێ نوێ یێ ئامێدی تیڤی ب دەست کەفت. نوکە نوژەن بکە بۆ دیتنا تایبەتمەندیێن نوێ.',
-    websiteUpdateBtn: 'نووکرن ب دووبارە بارکرن',
-    notificationSetup: 'ئاگەدارکرنان چالاک بکە',
-    notificationSetupDesc: 'ئاگەدارکرن بۆ تە دێ هێن کاتێ کەنالێن نوێ یان نوژەنکرنێن مالپەری دبن.',
-    notificationEnabled: 'ئاگەدارکرن هاتنە چالاککرن',
-    notificationDisabled: 'ئاگەدارکرن هاتنە ناچالاککرن',
-    notificationAllowBtn: 'رێگە پێدان پێ بکە',
-    notificationSuccessTitle: 'ئاگەدارکرنێن ئامێدی تیڤی',
-    notificationSuccessDesc: 'نوکە م دێ تە ئاگەدار کەین دەما کەنالێن نوێ زێدە دبن یان دهێنە نوژەنکرن!',
-    systemStatus: 'سیستەم و ئاگەدارکرن',
-    appVersion: 'وەشانێ ئەپێ',
-    checkUpdates: 'لێگەریان بۆ نووکرنێ',
-    checking: 'خەریکە لێدگەریێت...',
-    upToDate: 'ئەپ د نوێترین وەشاندایە',
-    updateReady: 'نووکرنا نوێ یا بەرهەڤە!',
-    deviceModeTV: 'شێوازێ تەلەفزیۆنێ',
-    deviceModePhone: 'شێوازێ موبایلێ',
-    deviceModeAuto: 'سیستەمێ خۆکار',
-    deviceSelectorLabel: 'رێکخستنا شاشێ',
-    tvRemoteGuide: 'کۆنترۆلا تیڤیێ یا چاڵاکە: دوگمەیێن ئاراستە بۆ تەماشاکرنێ، [Enter] بۆ لێدانێ، [Backspace/Esc] بۆ زڤرینێ.',
-    phoneGestureGuide: 'شێوازێ موبایلێ: دەستێ خۆ بکێشە ل سەر ڤیدیۆیێ بۆ گۆڕینا کەنالان!',
-    supportPhone: 'پشتەڤانیا تەلەفۆنێ',
-    supportPhoneDesc: 'بۆ پشتەڤانیێ ب ڕێکارێن پەیوەندیا تەلەفۆنی یان کۆمێن واتسئەپ، ڕاستەوخۆ پەیوەندیێ مە بکە.',
+    addChannel: 'زێدەکرنا کەناڵی',
+    addChannelDesc: 'کەناڵەکێ نوو یێ کوردی یان جیهانی زێدە بکە.',
+    channelName: 'ناڤێ کەناڵی',
+    streamUrl: 'لینکا پەخشی (HLS .m3u8)',
+    logoUrl: 'لینکا لۆگۆی (لینکا وێنەی)',
+    selectCategories: 'هاوپۆلان دیاری بکە',
+    adding: 'ل هەمبەر زێدەکرنێ...',
+    addedSuccess: 'کەناڵ ب سەرکەفتی هاتە زێدەکرن!',
+    validationError: 'تکایە هەموو خانان ب دروستی پر بکە',
+    updateBannerTitle: 'کەناڵێن نوو یێن بەردەستن',
+    updateBannerDesc: 'کەناڵێن نوو بۆ تۆڕێ هاتنە زێدەکرن. نوکە نوو بکە بۆ بینینا وان!',
+    updateNow: 'تۆڕێ نوو بکە',
+    updatingChannels: 'ل هەمبەر وەرگرتنا شەپۆلێن کەناڵان...',
+    websiteUpdateTitle: 'نووکرنا ماڵپەڕێ یا بەردەستە',
+    websiteUpdateDesc: 'وەشانەکا نوو یا ئامێدی تیڤی یا بەردەستە. داگرە بۆ لێکتێگەهشتنا تایبەتمەندیێن نوو.',
+    websiteUpdateBtn: 'داگرتن و نووکرن',
+    notificationSetup: 'ئاگادارکرنان چالاک بکە',
+    notificationSetupDesc: 'ئاگادارکرن دێ بۆ کەن کاتێ کەناڵەکێ نوو یان نووکرنا ماڵپەڕێ چێ ببیت.',
+    notificationEnabled: 'ئاگادارکرن هاتنە چالاککرن',
+    notificationDisabled: 'ئاگادارکرن ناچالاکن',
+    notificationAllowBtn: 'رێپێدان ب ئاگدارکرنێ',
+    notificationSuccessTitle: 'ئاگادارکرنێن ئامێدی تیڤی',
+    notificationSuccessDesc: 'دێ ئاگداریا تە کەین کاتێ کەناڵ زێدە دبن یان نوو دبن!',
+    systemStatus: 'سیستەم و ئاگادارکرن',
+    appVersion: 'وەشانێ ئەپی',
+    checkUpdates: 'بگەڕە بۆ نووکرنێ',
+    checking: 'ل هەمبەر گەڕانێ...',
+    upToDate: 'ئەپ د نووترین وەشان دایە',
+    updateReady: 'نووکرنا نوو یا بەردەستە!',
+    deviceModeTV: 'دۆخی تەلەفزیۆنی زیرەک',
+    deviceModePhone: 'دۆخی مۆبایلی',
+    deviceModeAuto: 'خۆکارانە',
+    deviceSelectorLabel: 'گونجاندنا شاشێ',
+    tvRemoteGuide: 'کۆنتڕۆڵا تەلەفزیۆنێ یا چالاکە: تیران بەکاربینە بۆ دیتنا کەناڵان، [Enter] بۆ لێدانێ، [Backspace/Esc] بۆ زڤڕینێ.',
+    phoneGestureGuide: 'دۆخی مۆبایلی: پەنجا خۆ بکێشە لایێ ڕاست/چەپ ل سەر ڤیدیۆیێ بۆ گوهۆڕینا کەناڵان!',
+    supportPhone: 'پاڵپشتیا تەلەفۆنی',
+    supportPhoneDesc: 'بۆ پاڵپشتیێ ب ڕێكا تەلەفۆنێ یان چاتا واتسئەپێ، ڕاستەوخۆ پەیوەندیێ ب مە بکە.',
     clickToCall: 'پەیوەندیێ بکە',
-    clickToChat: 'واتسئەپا پشتەڤانیێ',
-    advertiseHeader: '📢 ریکلامێ ل سەر ئامێدی تیڤی بەلاڤبکە و کارێ خۆ گەشەپێبدە!',
-    advertiseText: 'سناپچات، کەنال، یان کارێ خۆ لێرە بەلاڤبکە بۆ گەهشتن ب ہزاران بینەرێن چالاک یێن رۆژانە. کلیک بکە بۆ دەستپێکرنا ریکلامێ!',
-    contactToAdvertise: 'ریکلامێ لێرە بکە',
-    supportUsWithFib: 'پشتەڤانیا دارایی (FIB)'
+    clickToChat: 'واتسئەپا پاڵپشتیێ',
+    advertiseHeader: '📢 ڕیکلامێ ل ئامێدی تیڤی بڵاڤ بکە و کارێ خۆ مەزن بکە!',
+    advertiseText: 'سناپچات، دوکان، یوتیوب یان بزنسا خۆ لێرە بڵاڤ بکە بۆ گەهشتنا ب هزاران بینەرێن چالاک یێن ڕۆژانە. لێرە دابگرە بۆ دەستپێکرنێ!',
+    contactToAdvertise: 'ڕیکلام دگەل مە دابنە',
+    supportUsWithFib: 'پاڵپشتيا ئەپي ب ڕێكا (FIB)'
   },
   Arabic: {
+    home: 'الرئيسية',
+    language: 'اللغة',
+    search: 'بحث',
+    allChannels: 'جميع القنوات',
     noChannels: 'لم يتم العثور على قنوات في هذه الفئة',
-    noStream: 'لا يوجد بث متاح لهذه القناة',
+    noStream: 'البث غير متوفر حالياً لهذه القناة',
     searchPlaceholder: 'ابحث عن القنوات...',
-    supportMsg: 'يمكنك دعمنا من خلال التبرع لحساب FIB التالي:',
+    supportMsg: 'يمكنك دعم التطبيق عن طريق التبرع لحساب FIB التالي:',
     selectLang: 'اختر اللغة',
     playbackError: 'خطأ في التشغيل',
     reconnect: 'إعادة الاتصال',
@@ -1555,133 +1559,81 @@ const TRANSLATIONS = {
     categoryKids: 'أطفال',
     liveNow: 'بث مباشر',
     openLink: 'فتح الرابط',
-    welcomeDesc: 'أهلاً بكم في أميدي تي في لمشاهدة القنوات الكردية والعالمية العربية والرياضية بثاً مباشرًا',
-    initializing: 'جاري التحضير',
+    welcomeDesc: 'أهلاً بكم في أميدي تي في لمشاهدة القنوات الكردية، العالمية، العربية، والرياضية بث مباشر',
+    initializing: 'جاري البدء',
     networkOnline: 'الشبكة متصلة',
     initializingServer: 'جاري تهيئة الخادم...',
-    castDevice: 'البث إلى جهاز',
+    castDevice: 'بث إلى جهاز',
     installApp: 'تثبيت التطبيق',
-    installAppDesc: 'قم بتثبيت تطبيق أميدي تي في على جهازك لتجربة مشاهدة سريعة وبملء الشاشة.',
-    installInstructions: 'لتثبيت هذا التطبيق على جهاز iOS الخاص بك، اضغط على زر المشاركة في Safari، ثم اختر "إضافة إلى الشاشة الرئيسية".',
+    installAppDesc: 'قم بتثبيت تطبيق أميدي تي في على جهازك للاستمتاع ببث سريع ومستقر.',
+    installInstructions: 'لتثبيت التطبيق على جهاز iOS (آيفون)، اضغط على زر المشاركة في Safari ثم اختر "إضافة إلى الشاشة الرئيسية".',
     close: 'إغلاق',
     addChannel: 'إضافة قناة',
-    addChannelDesc: 'إضافة قناة تلفزيونية كردية أو عالمية جديدة للبث المباشر.',
+    addChannelDesc: 'إضافة قناة تلفزيونية كردية أو عالمية جديدة.',
     channelName: 'اسم القناة',
     streamUrl: 'رابط البث (HLS .m3u8)',
-    logoUrl: 'رابط الشعار (رابط صورة)',
-    selectCategories: 'اختر التصنيفات',
+    logoUrl: 'رابط الشعار (رابط الصورة)',
+    selectCategories: 'اختر الفئات',
     adding: 'جاري الإضافة...',
     addedSuccess: 'تم إضافة القناة بنجاح!',
-    validationError: 'يرجى ملء جميع الحقول بشكل صحيح',
-    updateBannerTitle: 'تحديث قنوات جديد متاح',
-    updateBannerDesc: 'تمت إضافة قنوات جديدة إلى الشبكة. حدث الآن لمشاهدتها!',
+    validationError: 'يرجى ملء جميع الحقول بقيم صالحة',
+    updateBannerTitle: 'تحديثات القنوات جاهزة',
+    updateBannerDesc: 'تم إضافة قنوات جديدة للشبكة. حدث الآن لمشاهدتها!',
     updateNow: 'تحديث القنوات',
-    updatingChannels: 'جاري جلب القنوات الجديدة وتحديث البث...',
-    websiteUpdateTitle: 'تحديث الموقع متاح',
-    websiteUpdateDesc: 'هناك تحديث جديد لموقع أميدي تي في. يرجى التحديث للحصول على أحدث الميزات والبث.',
-    websiteUpdateBtn: 'تحديث وإعادة التحميل',
+    updatingChannels: 'جاري مزامنة القنوات والترددات...',
+    websiteUpdateTitle: 'تحديث الموقع متوفر',
+    websiteUpdateDesc: 'نسخة جديدة من أميدي تي في متوفرة الآن. يرجى التحديث لتجربة الميزات الجديدة.',
+    websiteUpdateBtn: 'تحديث مع إعادة التحميل',
     notificationSetup: 'تفعيل الإشعارات',
-    notificationSetupDesc: 'احصل على تنبيهات فورية عند إضافة قنوات جديدة أو تحديثات هامة للموقع.',
-    notificationEnabled: 'الإشعارات مفعلة',
-    notificationDisabled: 'الإشعارات معطلة',
-    notificationAllowBtn: 'السماح بالتنبيهات',
-    notificationSuccessTitle: 'إشهارات أميدي تي في',
-    notificationSuccessDesc: 'ستتلقى الآن تنبيهات عندما يتم إضافة قنوات جديدة أو تحديثها!',
-    systemStatus: 'النظام والإشعارات',
+    notificationSetupDesc: 'اشترك لتلقي تنبيهات عندما تتوفر قنوات جديدة أو تحديثات للموقع.',
+    notificationEnabled: 'تم تفعيل الإشعارات',
+    notificationDisabled: 'تم تعطيل الإشعارات',
+    notificationAllowBtn: 'السماح بالإشعارات',
+    notificationSuccessTitle: 'إشعارات أميدي تي في',
+    notificationSuccessDesc: 'سنقوم الآن بإخبارك عند إضافة قنوات جديدة أو تحديثات!',
+    systemStatus: 'حالة النظام والتحديثات',
     appVersion: 'إصدار التطبيق',
     checkUpdates: 'التحقق من التحديثات',
     checking: 'جاري التحقق...',
-    upToDate: 'التطبيق محدث بالكامل',
-    updateReady: 'تحديث جديد متاح!',
-    deviceModeTV: 'وضع التلفاز الذكي',
-    deviceModePhone: 'وضع الهاتف المحمول',
-    deviceModeAuto: 'تحديد تلقائي',
-    deviceSelectorLabel: 'تحسين العرض',
-    tvRemoteGuide: 'وضع التلفاز نشط: استخدم الأسهم للتنقل بين القنوات، [Enter] للتشغيل، [Backspace/Esc] للرجوع.',
-    phoneGestureGuide: 'وضع الهاتف: اسحب يميناً أو يساراً لتغيير القنوات بسهولة!',
-    supportPhone: 'الدعم الهاتفي',
-    supportPhoneDesc: 'للحصول على الدعم عبر مكالمة هاتفية أو واتساب، تواصل معنا مباشرة.',
-    clickToCall: 'اتصل بنا الآن',
-    clickToChat: 'دعم واتساب',
-    advertiseHeader: '📢 روّج لأعمالك وقناتك وتواجدك على أميدي تي في!',
-    advertiseText: 'أعلن عن حسابك في سناب شات، متجرك، قناتك على يوتيوب، أو أعمالك التجارية هنا لتصل إلى عشرات الآلاف من المشاهدين النشطين يومياً.',
-    contactToAdvertise: 'أعلن معنا الآن',
-    supportUsWithFib: 'دعم التطبيق (FIB)'
+    upToDate: 'التطبيق محدث إلى آخر إصدار',
+    updateReady: 'تحديث جديد جاهز!',
+    deviceModeTV: 'وضع التلفزيون',
+    deviceModePhone: 'وضع الهاتف',
+    deviceModeAuto: 'تلقائي حسب النظام',
+    deviceSelectorLabel: 'إعدادات الشاشة والوضع',
+    tvRemoteGuide: 'التحكم بريموت التلفزيون مفعل: استخدم الأزرار لتغيير القنوات، [Enter] للتشغيل، [Backspace/Esc] للرجوع.',
+    phoneGestureGuide: 'إيماءات الهاتف: اسحب على الفيديو لتغيير القناة بسرعة!',
+    supportPhone: 'الدعم الهاتفي والمساعدة',
+    supportPhoneDesc: 'للحصول على المساعدة عبر الهاتف أو مجموعات الواتساب الخاصة بنا تواصل معنا مباشرة.',
+    clickToCall: 'اتصل بنا',
+    clickToChat: 'واتساب الدعم',
+    advertiseHeader: '📢 أعلن على أميدي تي في وانشر عملك!',
+    advertiseText: 'انشر حسابك على سناب شات، قناتك، أو عملك هنا للوصول إلى آلاف المشاهدين النشطين يومياً. اضغط للبدء!',
+    contactToAdvertise: 'أعلن هنا',
+    supportUsWithFib: 'الدعم المالي (FIB)'
   }
 };
 
-// --- Splash Screen Logo Loader ---
 const SplashScreen = ({ t }: { t: any; key?: string }) => {
   return (
     <motion.div
-      initial={{ opacity: 1 }}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      transition={{ duration: 0.6, ease: "easeInOut" }}
-      className="fixed inset-0 z-[100] bg-[#0f0a1e] flex flex-col items-center justify-center p-6 select-none"
+      className="fixed inset-0 bg-brand-bg z-[9999] flex items-center justify-center animate-none"
     >
-      <div className="flex flex-col items-center gap-6">
-        {/* Glow ambient background sphere */}
-        <div className="absolute inset-x-0 top-1/4 bottom-1/4 m-auto w-64 h-64 bg-purple-600/15 blur-[120px] rounded-full pointer-events-none" />
-
-        {/* Animated logo container */}
-        <motion.div
-          initial={{ scale: 0.75, opacity: 0, rotate: -5 }}
-          animate={{ scale: [0.75, 1.05, 1], opacity: 1, rotate: 0 }}
-          transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
-          className="w-32 h-32 rounded-3xl overflow-hidden shadow-[0_0_50px_rgba(147,51,234,0.25)] border border-white/10 p-1 bg-[#1a1433] flex items-center justify-center relative z-10"
-        >
-          <img 
-            src="https://i.postimg.cc/QxGcmFd3/file-0000000004b47246b78b315ac6479e1d.png" 
-            alt="AMEDI TV Logo" 
-            className="w-full h-full object-cover rounded-2xl" 
-            referrerPolicy="no-referrer" 
-          />
-        </motion.div>
-
-        {/* Text and Branding animations */}
-        <div className="text-center relative z-10">
-          <motion.h1
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.3, duration: 0.8, ease: "easeOut" }}
-            className="text-4xl font-black tracking-tighter text-white uppercase italic leading-none"
-          >
-            AMEDI <span className="text-brand-accent">TV</span>
-          </motion.h1>
-          
-          <motion.div
-            initial={{ width: 0 }}
-            animate={{ width: "80px" }}
-            transition={{ delay: 0.6, duration: 0.8, ease: "easeInOut" }}
-            className="h-[3px] bg-gradient-to-r from-transparent via-purple-600 to-transparent mx-auto mt-3 rounded-full"
-          />
-
-          <motion.p
-            initial={{ y: 15, opacity: 0 }}
-            animate={{ y: 0, opacity: 0.7 }}
-            transition={{ delay: 0.8, duration: 0.8, ease: "easeOut" }}
-            className="text-xs md:text-sm font-semibold text-slate-300 mt-4 max-w-sm md:max-w-md mx-auto leading-relaxed px-4 text-center"
-          >
-            {t.welcomeDesc}
-          </motion.p>
+      <div className="flex flex-col items-center gap-6 animate-none">
+        <div className="relative">
+          <div className="w-16 h-16 border-4 border-purple-500/10 border-t-purple-500 rounded-full animate-spin" />
+          <div className="absolute inset-2 border-4 border-indigo-500/10 border-b-indigo-500 rounded-full animate-spin" style={{ animationDirection: 'reverse' }} />
         </div>
-
-        {/* Linear Loading Progress */}
         <motion.div 
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 1.0, duration: 0.5 }}
-          className="mt-8 flex flex-col items-center gap-3 relative z-10"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex flex-col items-center gap-1.5"
         >
-          <div className="w-16 h-1 bg-white/10 rounded-full overflow-hidden relative">
-            <motion.div 
-              className="h-full bg-purple-600 rounded-full"
-              animate={{ x: ["-100%", "100%"] }}
-              transition={{ repeat: Infinity, duration: 1.5, ease: "easeInOut" }}
-              style={{ width: "50%" }}
-            />
-          </div>
-          <span className="text-[9px] uppercase font-bold tracking-[0.2em] text-white/30">{t.initializing}</span>
+          <span className="font-sans font-black tracking-widest text-lg bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-indigo-400">AMEDI TV</span>
+          <span className="font-mono text-[9px] uppercase tracking-widest text-slate-500">{t.initializing}</span>
         </motion.div>
       </div>
     </motion.div>
@@ -1709,6 +1661,13 @@ const ActivationScreen = ({
   const [copiedQi, setCopiedQi] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<'fib' | 'qi'>('fib');
   const [selectedPeriod, setSelectedPeriod] = useState<'1month' | '6months' | '1year'>('6months');
+  const [isSubscriptionCreated, setIsSubscriptionCreated] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('amedi_tv_sub_created') === 'true';
+    } catch (_) {
+      return false;
+    }
+  });
 
 
 
@@ -1740,6 +1699,9 @@ const ActivationScreen = ({
       qiInstructions: string;
       copyQiAccount: string;
       qiAccountNumber: string;
+      createSubscriptionBtn: string;
+      subscriptionSuccessNoticeText: string;
+      lockNotice: string;
     } 
   } = {
     English: {
@@ -1760,7 +1722,7 @@ const ActivationScreen = ({
       sixMonthsLabel: "6 Months",
       oneYearLabel: "1 Year",
       iqd: "IQD",
-      selectPeriodPrompt: "1. Specify subscription duration:",
+      selectPeriodPrompt: "1. Specify subscription duration & payment method:",
       selectedPlanLabel: "Selected Subscription Duration",
       requiredAmountLabel: "Required Payment Amount",
       activationStepCode: "2. Enter your activation code:",
@@ -1769,6 +1731,9 @@ const ActivationScreen = ({
       qiInstructions: "Transfer the subscription fee via Super Qi Wallet. Copy our Wallet ID below, complete the transfer, and send the screenshot to Savan Amedi on Snapchat.",
       copyQiAccount: "Copy Super Qi Wallet ID",
       qiAccountNumber: "Super Qi Wallet Number",
+      createSubscriptionBtn: "Create Subscription Plan ⚡",
+      subscriptionSuccessNoticeText: "Subscription Created Successfully! Please complete payment below to get your code.",
+      lockNotice: "🔐 Please complete Step 1 (Create Subscription) first to unlock this section.",
     },
     Kurdish: {
       title: "چالاککردن پێویستە",
@@ -1788,7 +1753,7 @@ const ActivationScreen = ({
       sixMonthsLabel: "٦ مانگ",
       oneYearLabel: "١ ساڵ",
       iqd: "دینار",
-      selectPeriodPrompt: "١. ماوەی بەشداریکردنی پێویست دیاری بکە:",
+      selectPeriodPrompt: "١. ماوەی بەشداریکردنی پێویست و ڕێگەی پارەدان دیاری بکە:",
       selectedPlanLabel: "ماوەی بەشداریکردنی هەڵبژێردراو",
       requiredAmountLabel: "بڕی پارەی پێویست",
       activationStepCode: "٢. کۆدی چالاککردنەکە لێرە بنووسە:",
@@ -1797,6 +1762,9 @@ const ActivationScreen = ({
       qiInstructions: "بڕی پارەی بەشداریکردنەکە بنێرە بۆ جزدانی سوپەر کی (Super Qi) لە خوارەوە. ژمارەی جزدانەکە کۆپی بکە، پارەکە بنێرە، و پاشان وێنەی شاشەکە بۆ ساڤان ئامێدی بنێرە لە سناپچات.",
       copyQiAccount: "کۆپیکردنی مۆبایلی جزدانی Super Qi",
       qiAccountNumber: "ژمارەی جزدانی سوپەر کی (Super Qi)",
+      createSubscriptionBtn: "دروستکردنی پلانی بەشداریکردن ⚡",
+      subscriptionSuccessNoticeText: "بەشداریکردنەکەت بە سەرکەوتوویی دروستکرا! تکایە پارەکە بنێرە بۆ وەرگرتنی کۆدی فەرمی.",
+      lockNotice: "🔐 تکایە سەرەتا هەنگاوی یەکەم (دروستکردنی بەشداریکردن) تەواو بکە بۆ کردنەوەی ئەم بەشە.",
     },
     Badini: {
       title: "چالاککرن یا پێدڤییە",
@@ -1816,7 +1784,7 @@ const ActivationScreen = ({
       sixMonthsLabel: "٦ هەیڤ",
       oneYearLabel: "١ ساڵ",
       iqd: "دینار",
-      selectPeriodPrompt: "١. ماوێ پشکداریا خۆ دەستنیشان بکە:",
+      selectPeriodPrompt: "١. ماوێ پشکداریا خۆ و رێکا پارەدانێ دەستنیشان بکە:",
       selectedPlanLabel: "ماوێ پشکداریا دەستنیشانکری",
       requiredAmountLabel: "کۆژمێ پارەیێ کەتێ پێدڤی",
       activationStepCode: "٢. کۆدێ چالاککرنێ بنڤیسە:",
@@ -1825,6 +1793,9 @@ const ActivationScreen = ({
       qiInstructions: "بها یێ پشکداریێ فرێکە بۆ سەر جزدانا سوپەر کی (Super Qi) ل خوارێ. ژمارا جزدانێ کۆپی بکە، پارەی فڕێکە، و پشتی هینگێ وێنێ شاشەیێ بۆ سناپێ ساڤانی فرێکە.",
       copyQiAccount: "کۆپیکرنا مۆبایلا جزدانا Super Qi",
       qiAccountNumber: "ژمارا جزدانا سوپەر کی (Super Qi)",
+      createSubscriptionBtn: "دروستکرنا پلانا پشکداریێ ⚡",
+      subscriptionSuccessNoticeText: "پشکداریا تە ب سەرکەفتی هاتە دروستکرن! تکایە بهای فرێکە بۆ بدەستڤەئینانا کۆدێ فەرمی.",
+      lockNotice: "🔐 تکایە پشک یا ئێکێ (دروستکرنا پشکداریێ) ب دوماهی بینە بۆ ڤەکرنا ڤی بەشی.",
     },
     Arabic: {
       title: "مطلوب التفعيل",
@@ -1844,7 +1815,7 @@ const ActivationScreen = ({
       sixMonthsLabel: "٦ أشهر",
       oneYearLabel: "سنة كاملة",
       iqd: "د.ع",
-      selectPeriodPrompt: "١. اختر مدة الاشتراك المطلوبة:",
+      selectPeriodPrompt: "١. اختر مدة الاشتراك المطلوبة وطريقة الدفع:",
       selectedPlanLabel: "مدة الاشتراك المحددة",
       requiredAmountLabel: "المبلغ المطلوب تحويله",
       activationStepCode: "٢. أدخل كود التفعيل الذي استلمته هنا:",
@@ -1853,6 +1824,9 @@ const ActivationScreen = ({
       qiInstructions: "قم بتحويل رسوم الاشتراك إلى محفظة سوبر كي (Super Qi) أدناه. انسخ رقم المحفظة، وأكمل التحويل، ثم أرسل لقطة الشاشة إلى سافان أميدي على سناب شات.",
       copyQiAccount: "نسخ رقم محفظة Super Qi",
       qiAccountNumber: "رقم محفظة سوبر كي (Super Qi)",
+      createSubscriptionBtn: "إنشاء خطة الاشتراك ⚡",
+      subscriptionSuccessNoticeText: "تم إنشاء الاشتراك بنجاح! يرجى تحويل المبلغ للحصول على كود التفعيل الخاص بك.",
+      lockNotice: "🔐 يرجى إتمام الخطوة الأولى (إنشاء الاشتراك) أولاً لفتح هذا القسم وتحريك التفعيل.",
     }
   };
 
@@ -1968,42 +1942,58 @@ const ActivationScreen = ({
           </div>
         </div>
 
-        <form onSubmit={handleActivate} className="w-full flex flex-col gap-3">
-          <div className="text-left" dir={isRtl ? 'rtl' : 'ltr'}>
-            <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">
-              {currentAct.activationStepCode}
-            </span>
-          </div>
-          <div className="relative">
-            <input
-              type="text"
-              value={activationCode}
-              onChange={(e) => {
-                setActivationCode(e.target.value);
-                if (status.type !== 'idle') setStatus({ type: 'idle', message: '' });
-              }}
-              placeholder={currentAct.placeholder}
-              className="w-full bg-black/40 border border-white/10 focus:outline-none focus:border-brand-accent/60 rounded-2xl py-3 px-4 text-xs font-mono text-center text-white tracking-widest placeholder-white/20 uppercase transition-all"
-              autoFocus
-              disabled={validating}
-            />
-          </div>
-
-          <button
-            type="submit"
-            disabled={validating || !activationCode.trim()}
-            className="w-full py-3.5 rounded-2xl bg-brand-accent hover:bg-purple-700 disabled:opacity-40 text-white font-black text-xs tracking-widest uppercase transition-all shadow-lg shadow-brand-accent/10 active:scale-[0.98] cursor-pointer animate-none"
-          >
-            {validating ? (
-              <span className="flex items-center justify-center gap-2">
-                <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                <span>VALIDATING...</span>
+        <div className={`w-full transition-all duration-300 ${!isSubscriptionCreated ? 'opacity-40 pointer-events-none' : ''}`}>
+          <form onSubmit={handleActivate} className="w-full flex flex-col gap-3">
+            <div className="text-left flex items-center justify-between" dir={isRtl ? 'rtl' : 'ltr'}>
+              <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">
+                {currentAct.activationStepCode}
               </span>
-            ) : (
-              currentAct.button
-            )}
-          </button>
-        </form>
+              {!isSubscriptionCreated && (
+                <span className="text-[9px] font-bold text-amber-500 animate-pulse flex items-center gap-1">
+                  <Lock className="w-3 h-3" /> {isRtl ? 'قوفڵکراوە' : 'LOCKED'}
+                </span>
+              )}
+            </div>
+            <div className="relative">
+              <input
+                type="text"
+                value={activationCode}
+                onChange={(e) => {
+                  setActivationCode(e.target.value);
+                  if (status.type !== 'idle') setStatus({ type: 'idle', message: '' });
+                }}
+                placeholder={currentAct.placeholder}
+                className="w-full bg-black/40 border border-white/10 focus:outline-none focus:border-brand-accent/60 rounded-2xl py-3 px-4 text-xs font-mono text-center text-white tracking-widest placeholder-white/20 uppercase transition-all"
+                autoFocus={isSubscriptionCreated}
+                disabled={validating || !isSubscriptionCreated}
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={validating || !activationCode.trim() || !isSubscriptionCreated}
+              className="w-full py-3.5 rounded-2xl bg-brand-accent hover:bg-purple-700 disabled:opacity-40 text-white font-black text-xs tracking-widest uppercase transition-all shadow-lg shadow-brand-accent/10 active:scale-[0.98] cursor-pointer animate-none"
+            >
+              {validating ? (
+                <span className="flex items-center justify-center gap-2">
+                  <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  <span>VALIDATING...</span>
+                </span>
+              ) : (
+                currentAct.button
+              )}
+            </button>
+          </form>
+        </div>
+
+        {!isSubscriptionCreated && (
+          <div className="w-full mt-2 p-3.5 bg-amber-500/10 border border-amber-500/20 rounded-2xl text-start flex gap-2.5 items-start">
+            <Lock className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+            <p className="text-[11px] text-amber-300 font-extrabold leading-relaxed">
+              {currentAct.lockNotice}
+            </p>
+          </div>
+        )}
 
         {status.type !== 'idle' && (
           <div className={`w-full mt-4 p-3 rounded-xl border text-[11px] font-black leading-snug ${
@@ -2160,78 +2150,111 @@ const ActivationScreen = ({
                 </div>
               </div>
 
-              {/* Conditional payment instruction details card */}
-              {paymentMethod === 'fib' ? (
-                <>
-                  <div className="bg-white/5 rounded-xl p-3 border border-white/5 text-center flex flex-col items-center justify-center gap-1">
-                    <span className="text-[9px] text-brand-accent uppercase tracking-widest font-black">FIB Account Number</span>
-                    <span className="text-sm font-black text-white tracking-wider font-mono">P7AZPUOWHQFL</span>
-                    <span className="text-[10px] text-white/40 font-bold uppercase shrink-0">Savan Amedi</span>
-                    <button
-                      type="button"
-                      onClick={handleCopyFIB}
-                      className="mt-2 text-[10px] font-black uppercase tracking-wider bg-white/10 hover:bg-white/20 active:scale-95 text-white/90 rounded-lg px-3 py-1.5 cursor-pointer border border-white/5"
-                    >
-                      {copiedAccount ? currentAct.copied : currentAct.copyAccount}
-                    </button>
-                  </div>
-
-                  <div className="w-28 h-28 mx-auto bg-white rounded-xl p-1.5 flex items-center justify-center border border-white/10">
-                    <img 
-                      src="https://i.postimg.cc/J0Y5zQCz/IMG-20260518-053546.jpg" 
-                      alt="FIB QR Code For Payments" 
-                      className="w-full h-full object-contain"
-                      referrerPolicy="no-referrer"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).src = 'https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=P7AZPUOWHQFL';
-                      }}
-                    />
-                  </div>
-                </>
+              {/* Subscription CTA / Status Banner */}
+              {!isSubscriptionCreated ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsSubscriptionCreated(true);
+                    try {
+                      localStorage.setItem('amedi_tv_sub_created', 'true');
+                    } catch (_) {}
+                  }}
+                  className="w-full mt-2 py-3.5 rounded-2xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-black text-xs tracking-widest uppercase transition-all shadow-lg shadow-purple-600/20 active:scale-95 cursor-pointer flex items-center justify-center gap-2"
+                >
+                  <Sparkles className="w-4 h-4 text-amber-300 animate-pulse" />
+                  <span>{currentAct.createSubscriptionBtn}</span>
+                </button>
               ) : (
-                <>
-                  <div className="bg-white/5 rounded-xl p-3 border border-white/5 text-center flex flex-col items-center justify-center gap-1">
-                    <span className="text-[9px] text-brand-accent uppercase tracking-widest font-black">
-                      {currentAct.qiAccountNumber}
-                    </span>
-                    <span className="text-sm font-black text-white tracking-wider font-mono">1149575266</span>
-                    <span className="text-[10px] text-white/40 font-bold uppercase shrink-0">Savan Amedi</span>
-                    <button
-                      type="button"
-                      onClick={handleCopyQi}
-                      className="mt-2 text-[10px] font-black uppercase tracking-wider bg-white/10 hover:bg-white/20 active:scale-95 text-white/90 rounded-lg px-3 py-1.5 cursor-pointer border border-white/5"
-                    >
-                      {copiedQi ? currentAct.copied : currentAct.copyQiAccount}
-                    </button>
-                  </div>
-
-                  <div className="w-28 h-28 mx-auto bg-[#fff] rounded-xl p-1.5 flex items-center justify-center border border-white/10">
-                    <img 
-                      src="https://i.postimg.cc/Qx3RskcL/IMG-20260604-133817.png" 
-                      alt="Super Qi QR Code For Payments" 
-                      className="w-full h-full object-contain"
-                      referrerPolicy="no-referrer"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).src = 'https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=1149575266';
-                      }}
-                    />
-                  </div>
-                </>
+                <div className="bg-emerald-500/10 border border-emerald-500/25 rounded-2xl p-3.5 flex gap-3 text-start items-center">
+                  <CheckCircle className="w-5 h-5 text-emerald-400 shrink-0" />
+                  <span className="text-[11px] font-extrabold text-emerald-400 leading-normal">
+                    {currentAct.subscriptionSuccessNoticeText}
+                  </span>
+                </div>
               )}
 
-              <div className="flex flex-col items-center gap-2 mt-1 border-t border-white/5 pt-3">
-                <span className="text-[10px] font-bold text-white/60">{currentAct.orContact}</span>
-                <a
-                  href="https://www.snapchat.com/add/savan10.ten?share_id=P_WZNoKBOyw&locale=en-US"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 text-xs font-black uppercase tracking-wider text-white hover:text-brand-accent px-4 py-2 bg-yellow-400 hover:bg-yellow-500 rounded-xl transition-all shadow-md text-slate-900 shadow-yellow-500/10 cursor-pointer"
-                >
-                  <span className="w-2 h-2 bg-red-500 rounded-full animate-ping shrink-0" />
-                  <span>Savan Snapchat 💬</span>
-                  <ExternalLink className="w-3.5 h-3.5 shrink-0" />
-                </a>
-              </div>
+              {/* Conditional payment instruction details card */}
+              {isSubscriptionCreated ? (
+                <div className="flex flex-col gap-4 border-t border-white/5 pt-4">
+                  {paymentMethod === 'fib' ? (
+                    <>
+                      <div className="bg-white/5 rounded-xl p-3 border border-white/5 text-center flex flex-col items-center justify-center gap-1">
+                        <span className="text-[9px] text-brand-accent uppercase tracking-widest font-black">FIB Account Number</span>
+                        <span className="text-sm font-black text-white tracking-wider font-mono">P7AZPUOWHQFL</span>
+                        <span className="text-[10px] text-white/40 font-bold uppercase shrink-0">Savan Amedi</span>
+                        <button
+                          type="button"
+                          onClick={handleCopyFIB}
+                          className="mt-2 text-[10px] font-black uppercase tracking-wider bg-white/10 hover:bg-white/20 active:scale-95 text-white/90 rounded-lg px-3 py-1.5 cursor-pointer border border-white/5"
+                        >
+                          {copiedAccount ? currentAct.copied : currentAct.copyAccount}
+                        </button>
+                      </div>
+
+                      <div className="w-28 h-28 mx-auto bg-white rounded-xl p-1.5 flex items-center justify-center border border-white/10">
+                        <img 
+                          src="https://i.postimg.cc/J0Y5zQCz/IMG-20260518-053546.jpg" 
+                          alt="FIB QR Code For Payments" 
+                          className="w-full h-full object-contain"
+                          referrerPolicy="no-referrer"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = 'https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=P7AZPUOWHQFL';
+                          }}
+                        />
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="bg-white/5 rounded-xl p-3 border border-white/5 text-center flex flex-col items-center justify-center gap-1">
+                        <span className="text-[9px] text-brand-accent uppercase tracking-widest font-black">
+                          {currentAct.qiAccountNumber}
+                        </span>
+                        <span className="text-sm font-black text-white tracking-wider font-mono">1149575266</span>
+                        <span className="text-[10px] text-white/40 font-bold uppercase shrink-0">Savan Amedi</span>
+                        <button
+                          type="button"
+                          onClick={handleCopyQi}
+                          className="mt-2 text-[10px] font-black uppercase tracking-wider bg-white/10 hover:bg-white/20 active:scale-95 text-white/90 rounded-lg px-3 py-1.5 cursor-pointer border border-white/5"
+                        >
+                          {copiedQi ? currentAct.copied : currentAct.copyQiAccount}
+                        </button>
+                      </div>
+
+                      <div className="w-28 h-28 mx-auto bg-[#fff] rounded-xl p-1.5 flex items-center justify-center border border-white/10">
+                        <img 
+                          src="https://i.postimg.cc/Qx3RskcL/IMG-20260604-133817.png" 
+                          alt="Super Qi QR Code For Payments" 
+                          className="w-full h-full object-contain"
+                          referrerPolicy="no-referrer"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = 'https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=1149575266';
+                          }}
+                        />
+                      </div>
+                    </>
+                  )}
+
+                  <div className="flex flex-col items-center gap-2 mt-1 border-t border-white/5 pt-3">
+                    <span className="text-[10px] font-bold text-white/60">{currentAct.orContact}</span>
+                    <a
+                      href="https://www.snapchat.com/add/savan10.ten?share_id=P_WZNoKBOyw&locale=en-US"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 text-xs font-black uppercase tracking-wider text-white hover:text-brand-accent px-4 py-2 bg-yellow-400 hover:bg-yellow-500 rounded-xl transition-all shadow-md text-slate-900 shadow-yellow-500/10 cursor-pointer"
+                    >
+                      <span className="w-2 h-2 bg-red-500 rounded-full animate-ping shrink-0" />
+                      <span>Savan Snapchat 💬</span>
+                      <ExternalLink className="w-3.5 h-3.5 shrink-0" />
+                    </a>
+                  </div>
+                </div>
+              ) : (
+                <div className="p-4 bg-white/5 border border-white/10 rounded-2xl text-center text-[10.5px] text-amber-500/80 uppercase font-black tracking-wider flex items-center justify-center gap-2.5">
+                  <Lock className="w-4 h-4 text-amber-500 animate-pulse" />
+                  <span>{isRtl ? 'بڕوانامەی پارەدان بەستراوەتەوە بە دروستکردنی پلان' : 'Payment Coordinate Locked (Create Plan First)'}</span>
+                </div>
+              )}
             </motion.div>
           )}
         </div>
