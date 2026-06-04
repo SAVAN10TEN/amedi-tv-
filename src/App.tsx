@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'motion/react';
-import { Search, Globe, Home, Info, X, ChevronLeft, LayoutGrid, MonitorPlay, Cast, Play, Download, Smartphone, RefreshCw, Sparkles, Bell, BellOff, Share, Compass, Plus, Tv, Megaphone, Phone, MessageCircle, Ghost, Youtube, Instagram, Music2, Key, ExternalLink } from 'lucide-react';
+import { Search, Globe, Home, Info, X, ChevronLeft, LayoutGrid, MonitorPlay, Cast, Play, Download, Smartphone, RefreshCw, Sparkles, Bell, BellOff, Share, Compass, Plus, Tv, Megaphone, Phone, MessageCircle, Ghost, Youtube, Instagram, Music2, Key, ExternalLink, Check } from 'lucide-react';
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import Hls from 'hls.js';
 import { Category, Language, Channel } from './types';
@@ -1709,6 +1709,9 @@ const ActivationScreen = ({
   const [copiedQi, setCopiedQi] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<'fib' | 'qi'>('fib');
   const [selectedPeriod, setSelectedPeriod] = useState<'1month' | '6months' | '1year'>('6months');
+  const [payStep, setPayStep] = useState<'idle' | 'processing' | 'completed'>('idle');
+  const [generatedCode, setGeneratedCode] = useState("");
+  const [verifyingProgressText, setVerifyingProgressText] = useState("");
 
 
 
@@ -1740,6 +1743,10 @@ const ActivationScreen = ({
       qiInstructions: string;
       copyQiAccount: string;
       qiAccountNumber: string;
+      verifyPaymentBtn: string;
+      verifyingText: string;
+      codeGeneratedText: string;
+      autofillBtn: string;
     } 
   } = {
     English: {
@@ -1769,6 +1776,10 @@ const ActivationScreen = ({
       qiInstructions: "Transfer the subscription fee via Super Qi Wallet. Copy our Wallet ID below, complete the transfer, and send the screenshot to Savan Amedi on Snapchat.",
       copyQiAccount: "Copy Super Qi Wallet ID",
       qiAccountNumber: "Super Qi Wallet Number",
+      verifyPaymentBtn: "I Have Paid (Simulate Completion)",
+      verifyingText: "Verifying transaction on the secure network...",
+      codeGeneratedText: "Your premium code has been generated! Copy and activate below:",
+      autofillBtn: "Autofill & Activate Code",
     },
     Kurdish: {
       title: "چالاککردن پێویستە",
@@ -1797,6 +1808,10 @@ const ActivationScreen = ({
       qiInstructions: "بڕی پارەی بەشداریکردنەکە بنێرە بۆ جزدانی سوپەر کی (Super Qi) لە خوارەوە. ژمارەی جزدانەکە کۆپی بکە، پارەکە بنێرە، و پاشان وێنەی شاشەکە بۆ ساڤان ئامێدی بنێرە لە سناپچات.",
       copyQiAccount: "کۆپیکردنی مۆبایلی جزدانی Super Qi",
       qiAccountNumber: "ژمارەی جزدانی سوپەر کی (Super Qi)",
+      verifyPaymentBtn: "پارەم داوە (بینینی کۆدی چالاککردن)",
+      verifyingText: "بەسەرکەوتوویی پشکنین بۆ پارەدان دەکات لەسەر تۆڕی پارێزراو...",
+      codeGeneratedText: "کۆدی نایابی فەرمی ئامادەکرا! کۆپی بکە و لە خوارەوە چالاکی بکە:",
+      autofillBtn: "تۆمارکردنی خۆکار و چالاککردن",
     },
     Badini: {
       title: "چالاککرن یا پێدڤییە",
@@ -1825,6 +1840,10 @@ const ActivationScreen = ({
       qiInstructions: "بها یێ پشکداریێ فرێکە بۆ سەر جزدانا سوپەر کی (Super Qi) ل خوارێ. ژمارا جزدانێ کۆپی بکە، پارەی فڕێکە، و پشتی هینگێ وێنێ شاشەیێ بۆ سناپێ ساڤانی فرێکە.",
       copyQiAccount: "کۆپیکرنا مۆبایلا جزدانا Super Qi",
       qiAccountNumber: "ژمارا جزدانا سوپەر کی (Super Qi)",
+      verifyPaymentBtn: "من پارە یێ فڕێکری (دیتنا کۆدی)",
+      verifyingText: "پشکنین د رێکا تورا پاراستی دا دهێتە کرن بۆ بهایێ پشکداریێ...",
+      codeGeneratedText: "کۆدێ تە یێ فەرمی یێ نایاب هاتە دروستکرن! کۆپی بکە و ل خوارێ چالاک بکە:",
+      autofillBtn: "نڤیسینا خۆدار و چالاککرن",
     },
     Arabic: {
       title: "مطلوب التفعيل",
@@ -1853,6 +1872,10 @@ const ActivationScreen = ({
       qiInstructions: "قم بتحويل رسوم الاشتراك إلى محفظة سوبر كي (Super Qi) أدناه. انسخ رقم المحفظة، وأكمل التحويل، ثم أرسل لقطة الشاشة إلى سافان أميدي على سناب شات.",
       copyQiAccount: "نسخ رقم محفظة Super Qi",
       qiAccountNumber: "رقم محفظة سوبر كي (Super Qi)",
+      verifyPaymentBtn: "لقد قمت بالتحويل (تأكيد الدفع واستلام الكود)",
+      verifyingText: "جاري التحقق من عملية التحويل عبر الشبكة الآمنة...",
+      codeGeneratedText: "تم إنشاء كود التفعيل الخاص بك بنجاح! انسخه وقم بالتفعيل أدناه:",
+      autofillBtn: "تعبئة تلقائية وتفعيل الاشتراك",
     }
   };
 
@@ -1892,6 +1915,37 @@ const ActivationScreen = ({
     } finally {
       setValidating(false);
     }
+  };
+
+  const handleConfirmPaymentClick = async () => {
+    setPayStep('processing');
+    setVerifyingProgressText(language === 'Kurdish' ? "پەیوەندیکردن بە تۆڕی دەستەبەرکردنی فەرمی..." : language === 'Badini' ? "پەیوەندیکرن ب تورا پاراستی د هێتە کرن..." : language === 'Arabic' ? "جاري الاتصال بالشبكة الآمنة للتحقق..." : "Initiating secure connection...");
+    
+    setTimeout(() => {
+      setVerifyingProgressText(language === 'Kurdish' ? 'پشکنینی گواستنەوە لەگەڵ سیستمەکانی جزدانکردن...' : language === 'Badini' ? 'پشکنینا گواستنەوا بهایێ مۆری د هژمارێ دا...' : language === 'Arabic' ? 'جاري مطابقة الحوالة مع أنظمة جزدان...' : 'Matching transaction with wallet systems...');
+    }, 1000);
+
+    setTimeout(async () => {
+      try {
+        const response = await fetch('/api/payments/complete', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ period: selectedPeriod, paymentMethod })
+        });
+        const data = await response.json();
+        if (data.success) {
+          setGeneratedCode(data.code);
+          setPayStep('completed');
+        } else {
+          alert("Could not complete payment: " + (data.message || "Unknown error"));
+          setPayStep('idle');
+        }
+      } catch (err) {
+        console.error("Payment verification failure:", err);
+        alert("Verification failed due to connection error. Please try again.");
+        setPayStep('idle');
+      }
+    }, 2200);
   };
 
   const handleCopyFIB = async () => {
@@ -2161,61 +2215,127 @@ const ActivationScreen = ({
               </div>
 
               {/* Conditional payment instruction details card */}
-              {paymentMethod === 'fib' ? (
-                <>
-                  <div className="bg-white/5 rounded-xl p-3 border border-white/5 text-center flex flex-col items-center justify-center gap-1">
-                    <span className="text-[9px] text-brand-accent uppercase tracking-widest font-black">FIB Account Number</span>
-                    <span className="text-sm font-black text-white tracking-wider font-mono">P7AZPUOWHQFL</span>
-                    <span className="text-[10px] text-white/40 font-bold uppercase shrink-0">Savan Amedi</span>
-                    <button
-                      type="button"
-                      onClick={handleCopyFIB}
-                      className="mt-2 text-[10px] font-black uppercase tracking-wider bg-white/10 hover:bg-white/20 active:scale-95 text-white/90 rounded-lg px-3 py-1.5 cursor-pointer border border-white/5"
-                    >
-                      {copiedAccount ? currentAct.copied : currentAct.copyAccount}
-                    </button>
+              {payStep === 'processing' ? (
+                <div className="flex flex-col items-center justify-center py-8 gap-4 text-center bg-white/5 border border-white/5 rounded-2xl">
+                  <div className="relative flex items-center justify-center">
+                    <div className="w-12 h-12 border-4 border-emerald-500/20 border-t-emerald-400 rounded-full animate-spin" />
+                    <span className="absolute text-emerald-400 font-bold text-xs">🔒</span>
+                  </div>
+                  <p className="text-xs font-black text-emerald-400 animate-pulse tracking-wide uppercase px-2">
+                    {currentAct.verifyingText}
+                  </p>
+                  <span className="text-[10px] text-white/40 font-mono italic px-2">
+                    {verifyingProgressText}
+                  </span>
+                </div>
+              ) : payStep === 'completed' ? (
+                <div className="flex flex-col items-center gap-4 py-4 px-3 bg-gradient-to-b from-emerald-500/10 to-transparent border border-emerald-500/20 rounded-2xl relative overflow-hidden text-center">
+                  <div className="absolute top-0 right-0 w-16 h-16 bg-emerald-500/5 blur-xl rounded-full" />
+                  
+                  <div className="w-10 h-10 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 flex items-center justify-center text-lg font-bold animate-bounce shadow-[0_0_15px_rgba(16,185,129,0.2)]">
+                    ✔
                   </div>
 
-                  <div className="w-28 h-28 mx-auto bg-white rounded-xl p-1.5 flex items-center justify-center border border-white/10">
-                    <img 
-                      src="https://i.postimg.cc/J0Y5zQCz/IMG-20260518-053546.jpg" 
-                      alt="FIB QR Code For Payments" 
-                      className="w-full h-full object-contain"
-                      referrerPolicy="no-referrer"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).src = 'https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=P7AZPUOWHQFL';
-                      }}
-                    />
+                  <div className="flex flex-col gap-1">
+                    <span className="text-xs font-black text-emerald-400 uppercase tracking-wider">
+                      {language === 'Kurdish' ? "پارەدان پشتڕاستکرایەوە! 🎉" : language === 'Badini' ? "پارەدان هاتە پشتڕاستکرن! 🎉" : language === 'Arabic' ? "تم تأكيد الدفع بنجاح! 🎉" : "Payment Confirmed! 🎉"}
+                    </span>
+                    <p className="text-[10px] text-white/60 font-semibold leading-normal">
+                      {currentAct.codeGeneratedText}
+                    </p>
                   </div>
-                </>
+
+                  <div className="bg-black/50 border border-emerald-500/20 rounded-xl p-3 flex flex-col items-center w-full shadow-inner shadow-black">
+                    <span className="text-[8px] text-emerald-400/90 font-black uppercase tracking-widest">
+                      {language === 'Kurdish' ? "کۆدی چالاککردنی تایبەت" : language === 'Badini' ? "کۆدێ چالاککرنا تایبەت" : language === 'Arabic' ? "كود التفعيل الخاص بك" : "Your Premium Activation Code"}
+                    </span>
+                    <span className="text-sm font-black text-white tracking-widest font-mono mt-1 select-all bg-emerald-500/10 px-3 py-1 rounded border border-emerald-500/20">
+                      {generatedCode}
+                    </span>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActivationCode(generatedCode);
+                      setPayStep('idle');
+                      setTimeout(() => {
+                        handleActivate();
+                      }, 100);
+                    }}
+                    className="w-full py-2.5 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-black text-xs uppercase tracking-wider rounded-xl transition-all cursor-pointer shadow-md shadow-emerald-500/10 active:scale-[0.97]"
+                  >
+                    ⚡ {currentAct.autofillBtn}
+                  </button>
+                </div>
               ) : (
                 <>
-                  <div className="bg-white/5 rounded-xl p-3 border border-white/5 text-center flex flex-col items-center justify-center gap-1">
-                    <span className="text-[9px] text-brand-accent uppercase tracking-widest font-black">
-                      {currentAct.qiAccountNumber}
-                    </span>
-                    <span className="text-sm font-black text-white tracking-wider font-mono">1149575266</span>
-                    <span className="text-[10px] text-white/40 font-bold uppercase shrink-0">Savan Amedi</span>
-                    <button
-                      type="button"
-                      onClick={handleCopyQi}
-                      className="mt-2 text-[10px] font-black uppercase tracking-wider bg-white/10 hover:bg-white/20 active:scale-95 text-white/90 rounded-lg px-3 py-1.5 cursor-pointer border border-white/5"
-                    >
-                      {copiedQi ? currentAct.copied : currentAct.copyQiAccount}
-                    </button>
-                  </div>
+                  {paymentMethod === 'fib' ? (
+                    <>
+                      <div className="bg-white/5 rounded-xl p-3 border border-white/5 text-center flex flex-col items-center justify-center gap-1">
+                        <span className="text-[9px] text-brand-accent uppercase tracking-widest font-black">FIB Account Number</span>
+                        <span className="text-sm font-black text-white tracking-wider font-mono">P7AZPUOWHQFL</span>
+                        <span className="text-[10px] text-white/40 font-bold uppercase shrink-0">Savan Amedi</span>
+                        <button
+                          type="button"
+                          onClick={handleCopyFIB}
+                          className="mt-2 text-[10px] font-black uppercase tracking-wider bg-white/10 hover:bg-white/20 active:scale-95 text-white/90 rounded-lg px-3 py-1.5 cursor-pointer border border-white/5"
+                        >
+                          {copiedAccount ? currentAct.copied : currentAct.copyAccount}
+                        </button>
+                      </div>
 
-                  <div className="w-28 h-28 mx-auto bg-white rounded-xl p-1.5 flex items-center justify-center border border-white/10">
-                    <img 
-                      src="https://i.postimg.cc/Qx3RskcL/IMG-20260604-133817.png" 
-                      alt="Super Qi QR Code For Payments" 
-                      className="w-full h-full object-contain"
-                      referrerPolicy="no-referrer"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).src = 'https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=1149575266';
-                      }}
-                    />
-                  </div>
+                      <div className="w-28 h-28 mx-auto bg-white rounded-xl p-1.5 flex items-center justify-center border border-white/10">
+                        <img 
+                          src="https://i.postimg.cc/J0Y5zQCz/IMG-20260518-053546.jpg" 
+                          alt="FIB QR Code For Payments" 
+                          className="w-full h-full object-contain"
+                          referrerPolicy="no-referrer"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = 'https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=P7AZPUOWHQFL';
+                          }}
+                        />
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="bg-white/5 rounded-xl p-3 border border-white/5 text-center flex flex-col items-center justify-center gap-1">
+                        <span className="text-[9px] text-brand-accent uppercase tracking-widest font-black">
+                          {currentAct.qiAccountNumber}
+                        </span>
+                        <span className="text-sm font-black text-white tracking-wider font-mono">1149575266</span>
+                        <span className="text-[10px] text-white/40 font-bold uppercase shrink-0">Savan Amedi</span>
+                        <button
+                          type="button"
+                          onClick={handleCopyQi}
+                          className="mt-2 text-[10px] font-black uppercase tracking-wider bg-white/10 hover:bg-white/20 active:scale-95 text-white/90 rounded-lg px-3 py-1.5 cursor-pointer border border-white/5"
+                        >
+                          {copiedQi ? currentAct.copied : currentAct.copyQiAccount}
+                        </button>
+                      </div>
+
+                      <div className="w-28 h-28 mx-auto bg-white rounded-xl p-1.5 flex items-center justify-center border border-white/10">
+                        <img 
+                          src="https://i.postimg.cc/Qx3RskcL/IMG-20260604-133817.png" 
+                          alt="Super Qi QR Code For Payments" 
+                          className="w-full h-full object-contain"
+                          referrerPolicy="no-referrer"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = 'https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=1149575266';
+                          }}
+                        />
+                      </div>
+                    </>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={handleConfirmPaymentClick}
+                    className="w-full mt-2 py-3 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-slate-950 font-black text-xs uppercase tracking-wider rounded-2xl transition-all shadow-lg active:scale-95 cursor-pointer flex items-center justify-center gap-2"
+                  >
+                    <Check className="w-4 h-4" />
+                    <span>{currentAct.verifyPaymentBtn}</span>
+                  </button>
                 </>
               )}
 
