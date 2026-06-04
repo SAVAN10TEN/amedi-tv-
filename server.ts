@@ -722,34 +722,6 @@ async function startServer() {
     }
   });
 
-  app.post("/api/payments/complete", (req, res) => {
-    const { period, paymentMethod } = req.body;
-    if (!period || !['1month', '6months', '1year'].includes(period)) {
-      return res.status(400).json({ success: false, message: "Invalid or missing subscription period" });
-    }
-
-    const randomNum = Math.floor(100000 + Math.random() * 900000);
-    const generatedCode = `AMEDI-${period.toUpperCase()}-${randomNum}`;
-
-    if (!activationConfig.validCodes.includes(generatedCode)) {
-      activationConfig.validCodes.push(generatedCode);
-    }
-
-    try {
-      fs.writeFileSync(activationConfigPath, JSON.stringify(activationConfig, null, 2), "utf-8");
-      console.log(`[Payment Code Gen] Automatically registered code for ${period}: ${generatedCode}`);
-      broadcastEvent("activation-config-updated", { config: activationConfig });
-    } catch (err) {
-      console.error("Failed to persist newly generated payment code:", err);
-    }
-
-    res.json({
-      success: true,
-      code: generatedCode,
-      message: "Payment confirmed successfully. Your activation code has been generated."
-    });
-  });
-
 
 
   app.get("/api/admin/activation-config", (req, res) => {
