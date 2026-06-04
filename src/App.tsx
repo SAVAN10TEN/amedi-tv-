@@ -1710,26 +1710,7 @@ const ActivationScreen = ({
   const [paymentMethod, setPaymentMethod] = useState<'fib' | 'qi'>('fib');
   const [selectedPeriod, setSelectedPeriod] = useState<'1month' | '6months' | '1year'>('6months');
 
-  const [fibChecking, setFibChecking] = useState(false);
-  const [fibSession, setFibSession] = useState<{
-    paymentId: string;
-    qrCode?: string;
-    readableCode?: string;
-    status: 'PAID' | 'UNPAID' | 'EXPIRED';
-    activationCode?: string;
-    isSimulated?: boolean;
-    amount?: number;
-  } | null>(null);
-  const [fibPollIntervalId, setFibPollIntervalId] = useState<number | null>(null);
-  const [manualFIBMode, setManualFIBMode] = useState(false);
 
-  useEffect(() => {
-    return () => {
-      if (fibPollIntervalId) {
-        clearInterval(fibPollIntervalId);
-      }
-    };
-  }, [fibPollIntervalId]);
 
   const actText: { 
     [key in Language]: { 
@@ -1925,7 +1906,7 @@ const ActivationScreen = ({
 
   const handleCopyQi = async () => {
     try {
-      await navigator.clipboard.writeText('07823549100');
+      await navigator.clipboard.writeText('1149575266');
       setCopiedQi(true);
       setTimeout(() => setCopiedQi(false), 2000);
     } catch (err) {
@@ -1933,88 +1914,7 @@ const ActivationScreen = ({
     }
   };
 
-  const startPollingFib = (paymentId: string) => {
-    if (fibPollIntervalId) {
-      clearInterval(fibPollIntervalId);
-    }
 
-    const intervalId = window.setInterval(async () => {
-      try {
-        const res = await fetch(`/api/payments/fib/status/${paymentId}`);
-        const data = await res.json();
-        if (data.success) {
-          setFibSession(prev => prev ? { ...prev, status: data.status, activationCode: data.activationCode } : null);
-          if (data.status === 'PAID') {
-            window.clearInterval(intervalId);
-            setFibPollIntervalId(null);
-            setActivationCode(data.activationCode);
-          }
-        }
-      } catch (e) {
-        console.error("Error polling FIB status:", e);
-      }
-    }, 2500);
-
-    setFibPollIntervalId(intervalId);
-  };
-
-  const handleStartFibCheckout = async () => {
-    setFibChecking(true);
-    try {
-      const res = await fetch("/api/payments/fib/create", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ period: selectedPeriod })
-      });
-      const data = await res.json();
-      if (data.success) {
-        setFibSession(data);
-        startPollingFib(data.paymentId);
-      } else {
-        alert("Failed to initiate automated FIB payment session.");
-      }
-    } catch (err) {
-      console.error("FIB initiation error:", err);
-    } finally {
-      setFibChecking(false);
-    }
-  };
-
-  const handleCancelFibCheckout = () => {
-    if (fibPollIntervalId) {
-      window.clearInterval(fibPollIntervalId);
-      setFibPollIntervalId(null);
-    }
-    setFibSession(null);
-  };
-
-  const handleSimulateFibSuccess = async () => {
-    if (!fibSession) return;
-    try {
-      const res = await fetch("/api/payments/fib/simulate-complete", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ paymentId: fibSession.paymentId })
-      });
-      const data = await res.json();
-      if (data.success) {
-        const statusRes = await fetch(`/api/payments/fib/status/${fibSession.paymentId}`);
-        const statusData = await statusRes.json();
-        if (statusData.success) {
-          setFibSession(prev => prev ? { ...prev, status: statusData.status, activationCode: statusData.activationCode } : null);
-          if (statusData.status === 'PAID') {
-            if (fibPollIntervalId) {
-              window.clearInterval(fibPollIntervalId);
-              setFibPollIntervalId(null);
-            }
-            setActivationCode(statusData.activationCode);
-          }
-        }
-      }
-    } catch (err) {
-      console.error("Failed to simulate success:", err);
-    }
-  };
 
   return (
     <div className="fixed inset-0 z-[90] bg-[#0c081c] flex flex-col items-center justify-center p-6 select-none overflow-y-auto no-scrollbar" dir={isRtl ? 'rtl' : 'ltr'}>
@@ -2263,168 +2163,30 @@ const ActivationScreen = ({
               {/* Conditional payment instruction details card */}
               {paymentMethod === 'fib' ? (
                 <>
-                  {fibSession ? (
-                    <div className="w-full bg-brand-accent/5 border border-brand-accent/20 rounded-2xl p-4 flex flex-col items-center gap-3 relative overflow-hidden">
-                      <div className="absolute top-1 right-1 px-1.5 py-0.5 bg-brand-accent/20 text-brand-accent rounded text-[8px] font-bold">
-                        {fibSession.isSimulated ? "DEVELOPER SANDBOX" : "LIVE SECURE CHECKOUT"}
-                      </div>
+                  <div className="bg-white/5 rounded-xl p-3 border border-white/5 text-center flex flex-col items-center justify-center gap-1">
+                    <span className="text-[9px] text-brand-accent uppercase tracking-widest font-black">FIB Account Number</span>
+                    <span className="text-sm font-black text-white tracking-wider font-mono">P7AZPUOWHQFL</span>
+                    <span className="text-[10px] text-white/40 font-bold uppercase shrink-0">Savan Amedi</span>
+                    <button
+                      type="button"
+                      onClick={handleCopyFIB}
+                      className="mt-2 text-[10px] font-black uppercase tracking-wider bg-white/10 hover:bg-white/20 active:scale-95 text-white/90 rounded-lg px-3 py-1.5 cursor-pointer border border-white/5"
+                    >
+                      {copiedAccount ? currentAct.copied : currentAct.copyAccount}
+                    </button>
+                  </div>
 
-                      <div className="flex flex-col items-center text-center">
-                        <span className="text-[10px] uppercase font-black tracking-widest text-slate-400">FIB Dynamic Billing</span>
-                        <span className="text-lg font-black text-emerald-400 font-mono mt-0.5">
-                          {selectedPeriod === '1month' ? '5,000' : selectedPeriod === '6months' ? '15,000' : '20,000'} {currentAct.iqd}
-                        </span>
-                      </div>
-
-                      {fibSession.status === 'UNPAID' ? (
-                        <>
-                          <div className="p-2 bg-white rounded-xl border border-white/10 shadow-lg relative">
-                            {fibSession.qrCode ? (
-                              <img 
-                                src={fibSession.qrCode} 
-                                alt="FIB Payment QR Code" 
-                                className="w-32 h-32 object-contain"
-                              />
-                            ) : (
-                              <div className="w-32 h-32 flex items-center justify-center text-slate-400 font-medium text-xs">Generating...</div>
-                            )}
-                          </div>
-
-                          <div className="flex items-center gap-2 text-[10px] text-brand-accent font-black tracking-wider animate-pulse">
-                            <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block animate-ping" />
-                            WAITING FOR FIB PAYMENT...
-                          </div>
-
-                          <p className="text-[9px] text-white/50 text-center max-w-xs leading-normal font-semibold">
-                            Scan this dynamic secure QR code using the First Iraqi Bank (FIB) application on your phone to transfer the fee. Your key code generates instantly!
-                          </p>
-
-                          <div className="flex flex-col w-full gap-1.5 mt-1">
-                            {fibSession.isSimulated && (
-                              <button
-                                type="button"
-                                onClick={handleSimulateFibSuccess}
-                                className="w-full py-2 text-[10px] font-black tracking-wider uppercase bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-slate-950 rounded-xl transition-all cursor-pointer shadow-md shadow-emerald-500/10"
-                              >
-                                Test Success (Simulate Paid) ✨
-                              </button>
-                            )}
-                            <button
-                              type="button"
-                              onClick={handleCancelFibCheckout}
-                              className="w-full py-1.5 text-[9px] font-black uppercase tracking-wider bg-white/5 hover:bg-white/10 text-white rounded-xl transition-all cursor-pointer border border-white/5"
-                            >
-                              ✕ Cancel Payment Request
-                            </button>
-                          </div>
-                        </>
-                      ) : fibSession.status === 'PAID' ? (
-                        <div className="flex flex-col items-center text-center gap-2 py-2 w-full">
-                          <div className="w-12 h-12 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xl font-bold animate-bounce shadow-[0_0_20px_rgba(16,185,129,0.3)]">
-                            ✔
-                          </div>
-                          <span className="text-xs font-black tracking-wider text-emerald-400 uppercase">Payment Confirmed! 🎉</span>
-                          
-                          <div className="bg-black/40 border border-emerald-500/20 rounded-xl p-3 mt-1 flex flex-col items-center w-full">
-                            <span className="text-[9px] text-emerald-400 font-black uppercase tracking-widest">Your Dedicated Activation Code</span>
-                            <span className="text-base font-black text-white tracking-widest font-mono mt-1 select-all bg-emerald-500/10 px-3 py-1 rounded border border-emerald-500/30">
-                              {fibSession.activationCode}
-                            </span>
-                            <span className="text-[8.5px] text-slate-400 mt-2 font-semibold">The code has been registered. Just click the button below to activate!</span>
-                          </div>
-
-                          <button
-                            type="button"
-                            onClick={() => handleActivate()}
-                            className="mt-3 w-full py-2.5 bg-brand-accent hover:opacity-90 active:scale-95 text-xs font-black uppercase text-white rounded-xl tracking-wider shadow-lg shadow-brand-accent/20 cursor-pointer"
-                          >
-                            ⚡ COMPLETE ACTIVATION NOW
-                          </button>
-                        </div>
-                      ) : (
-                        <div className="flex flex-col items-center text-center gap-2 py-4">
-                          <span className="text-red-400 font-black uppercase text-xs">Checkout Session Expired ⏱</span>
-                          <button
-                            type="button"
-                            onClick={handleCancelFibCheckout}
-                            className="px-4 py-2 bg-white/10 hover:bg-white/15 text-xs font-semibold rounded-xl text-white mt-1 cursor-pointer"
-                          >
-                            Try Again
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="flex flex-col gap-3">
-                      <p className="text-[10px] text-center text-white/50 leading-relaxed font-semibold">
-                        Select automated fast payment with First Iraqi Bank (FIB) to process and retrieve your active subscription code instantly!
-                      </p>
-
-                      <div className="grid grid-cols-2 gap-2 mt-1">
-                        <button
-                          type="button"
-                          onClick={handleStartFibCheckout}
-                          disabled={fibChecking}
-                          className="flex flex-col items-center justify-center p-3 rounded-2xl bg-gradient-to-br from-brand-accent/20 to-brand-accent/5 border border-brand-accent/30 hover:border-brand-accent/50 active:scale-95 cursor-pointer text-center group transition-all"
-                        >
-                          <span className="text-lg mb-1 animate-pulse">⚡</span>
-                          <span className="text-[10px] font-black text-white uppercase tracking-wider group-hover:text-amber-300 transition-colors">
-                            {fibChecking ? "Initiating..." : "Online FIB Webpay"}
-                          </span>
-                          <span className="text-[8px] text-slate-400 mt-0.5 font-bold uppercase block leading-none">Automated & Instant</span>
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => setManualFIBMode(true)}
-                          className="flex flex-col items-center justify-center p-3 rounded-2xl bg-white/5 border border-white/5 hover:bg-white/10 active:scale-95 cursor-pointer text-center group transition-all"
-                        >
-                          <span className="text-lg mb-1">📋</span>
-                          <span className="text-[10px] font-black text-white uppercase tracking-wider group-hover:text-blue-300 transition-colors">
-                            Manual transfer
-                          </span>
-                          <span className="text-[8px] text-white/40 mt-0.5 font-bold uppercase block leading-none">Copy Wallet Address</span>
-                        </button>
-                      </div>
-
-                      {manualFIBMode && (
-                        <div className="border border-white/5 rounded-2xl p-3 bg-black/40 flex flex-col gap-3 relative mt-1">
-                          <button
-                            type="button"
-                            onClick={() => setManualFIBMode(false)}
-                            className="absolute top-2 right-2 text-[8px] font-black uppercase text-white/50 hover:text-white bg-white/5 hover:bg-white/10 px-1.5 py-0.5 rounded cursor-pointer"
-                          >
-                            ✕ Close manual details
-                          </button>
-                          
-                          <div className="bg-white/5 rounded-xl p-3 border border-white/5 text-center flex flex-col items-center justify-center gap-1 mt-6">
-                            <span className="text-[9px] text-brand-accent uppercase tracking-widest font-black">FIB Account Number</span>
-                            <span className="text-sm font-black text-white tracking-wider font-mono">P7AZPUOWHQFL</span>
-                            <span className="text-[10px] text-white/40 font-bold uppercase shrink-0">Savan Amedi</span>
-                            <button
-                              type="button"
-                              onClick={handleCopyFIB}
-                              className="mt-2 text-[10px] font-black uppercase tracking-wider bg-white/10 hover:bg-white/20 active:scale-95 text-white/90 rounded-lg px-3 py-1.5 cursor-pointer border border-white/5"
-                            >
-                              {copiedAccount ? currentAct.copied : currentAct.copyAccount}
-                            </button>
-                          </div>
-
-                          <div className="w-28 h-28 mx-auto bg-white rounded-xl p-1.5 flex items-center justify-center border border-white/10">
-                            <img 
-                              src="https://i.postimg.cc/J0Y5zQCz/IMG-20260518-053546.jpg" 
-                              alt="FIB QR Code For Payments" 
-                              className="w-full h-full object-contain"
-                              referrerPolicy="no-referrer"
-                              onError={(e) => {
-                                (e.target as HTMLImageElement).src = 'https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=P7AZPUOWHQFL';
-                              }}
-                            />
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
+                  <div className="w-28 h-28 mx-auto bg-white rounded-xl p-1.5 flex items-center justify-center border border-white/10">
+                    <img 
+                      src="https://i.postimg.cc/J0Y5zQCz/IMG-20260518-053546.jpg" 
+                      alt="FIB QR Code For Payments" 
+                      className="w-full h-full object-contain"
+                      referrerPolicy="no-referrer"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = 'https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=P7AZPUOWHQFL';
+                      }}
+                    />
+                  </div>
                 </>
               ) : (
                 <>
@@ -2432,7 +2194,7 @@ const ActivationScreen = ({
                     <span className="text-[9px] text-brand-accent uppercase tracking-widest font-black">
                       {currentAct.qiAccountNumber}
                     </span>
-                    <span className="text-sm font-black text-white tracking-wider font-mono">07823549100</span>
+                    <span className="text-sm font-black text-white tracking-wider font-mono">1149575266</span>
                     <span className="text-[10px] text-white/40 font-bold uppercase shrink-0">Savan Amedi</span>
                     <button
                       type="button"
@@ -2445,10 +2207,13 @@ const ActivationScreen = ({
 
                   <div className="w-28 h-28 mx-auto bg-white rounded-xl p-1.5 flex items-center justify-center border border-white/10">
                     <img 
-                      src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=07823549100" 
+                      src="https://i.postimg.cc/Qx3RskcL/IMG-20260604-133817.png" 
                       alt="Super Qi QR Code For Payments" 
                       className="w-full h-full object-contain"
                       referrerPolicy="no-referrer"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = 'https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=1149575266';
+                      }}
                     />
                   </div>
                 </>
