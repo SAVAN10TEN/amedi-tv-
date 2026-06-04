@@ -1620,22 +1620,72 @@ const SplashScreen = ({ t }: { t: any; key?: string }) => {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 bg-brand-bg z-[9999] flex items-center justify-center animate-none"
+      className="fixed inset-0 bg-brand-bg z-[9999] flex flex-col items-center justify-between py-16 px-4 select-none"
     >
-      <div className="flex flex-col items-center gap-6 animate-none">
-        <div className="relative">
-          <div className="w-16 h-16 border-4 border-purple-500/10 border-t-purple-500 rounded-full animate-spin" />
-          <div className="absolute inset-2 border-4 border-indigo-500/10 border-b-indigo-500 rounded-full animate-spin" style={{ animationDirection: 'reverse' }} />
-        </div>
+      {/* Spacer to push content down for vertical balance */}
+      <div className="w-1/12" />
+
+      {/* Brand Hero Context */}
+      <div className="flex flex-col items-center max-w-lg w-full text-center">
+        {/* Centered Glassmorphic Purple Icon box */}
         <motion.div 
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="flex flex-col items-center gap-1.5"
+          initial={{ scale: 0.85, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+          className="w-32 h-32 md:w-36 md:h-36 rounded-3xl overflow-hidden shadow-2xl shadow-purple-500/10 border border-white/5 bg-[#171230] flex items-center justify-center mb-8 shrink-0 relative"
         >
-          <span className="font-sans font-black tracking-widest text-lg bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-indigo-400">AMEDI TV</span>
-          <span className="font-mono text-[9px] uppercase tracking-widest text-slate-500">{t.initializing}</span>
+          <img 
+            src="https://i.postimg.cc/QxGcmFd3/file-0000000004b47246b78b315ac6479e1d.png" 
+            alt="AMEDI TV Logo" 
+            className="w-full h-full object-cover block shrink-0" 
+            referrerPolicy="no-referrer" 
+          />
         </motion.div>
+
+        {/* Title */}
+        <motion.h1 
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15, duration: 0.6, ease: "easeOut" }}
+          className="text-4xl md:text-5xl font-black uppercase italic tracking-tighter text-white leading-none mb-4"
+        >
+          AMEDI <span className="text-brand-accent">TV</span>
+        </motion.h1>
+
+        {/* Dynamic Welcome Message */}
+        <motion.p 
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.25, duration: 0.6, ease: "easeOut" }}
+          className="text-xs md:text-sm text-white/70 max-w-xs md:max-w-sm leading-relaxed px-4 font-sans font-medium"
+        >
+          {t.welcomeDesc}
+        </motion.p>
       </div>
+
+      {/* Initializing Progress Indicator */}
+      <motion.div 
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.4, duration: 0.5 }}
+        className="flex flex-col items-center w-full max-w-[180px] shrink-0"
+      >
+        <div className="w-full h-1 bg-white/10 rounded-full overflow-hidden relative shadow-inner">
+          <motion.div 
+            initial={{ left: "-40%", width: "40%" }}
+            animate={{ left: "100%" }}
+            transition={{ 
+              repeat: Infinity, 
+              duration: 1.8, 
+              ease: "easeInOut" 
+            }}
+            className="absolute h-full bg-gradient-to-r from-purple-500 to-indigo-500 rounded-full"
+          />
+        </div>
+        <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 mt-3 animate-pulse">
+          {t.initializing}
+        </span>
+      </motion.div>
     </motion.div>
   );
 };
@@ -2540,7 +2590,7 @@ export default function App() {
   };
 
   const [activationConfig, setActivationConfig] = useState<{ requireActivation: boolean; validCodes: string[] }>({
-    requireActivation: true,
+    requireActivation: false,
     validCodes: ["AMEDI2029", "SAVAN10", "ACTIVE-TV"]
   });
 
@@ -3085,9 +3135,14 @@ export default function App() {
 
     const timer = setTimeout(() => {
       minTimeElapsed = true;
-      if (dataLoaded) {
-        setShowSplash(false);
+      if (!dataLoaded) {
+        console.warn('Initial data load took too long, bypassing with local channels & categories layout.');
+        setChannels(CHANNELS);
+        setCategories(CATEGORIES);
+        setLoading(false);
+        dataLoaded = true;
       }
+      setShowSplash(false);
     }, 2800);
 
     async function loadData() {

@@ -1,5 +1,5 @@
 {
-  "requireActivation": true,
+  "requireActivation": false,
   "validCodes": [
     "2030",
     "AMEDI2030",

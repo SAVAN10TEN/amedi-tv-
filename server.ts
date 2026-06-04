@@ -59,7 +59,7 @@ try {
 // Load and manage Activation configuration persistently
 const activationConfigPath = path.join(process.cwd(), "activation_config.json");
 let activationConfig = {
-  requireActivation: true,
+  requireActivation: false,
   validCodes: ["2030", "AMEDI2030", "AMEDI2029", "SAVAN10", "ACTIVE-TV"]
 };
 
