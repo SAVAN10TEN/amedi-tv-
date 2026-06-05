@@ -782,72 +782,7 @@ const InfoModal = ({
               <button onClick={onClose} className="p-2 rounded-full hover:bg-white/5 transition-colors"><X className="w-6 h-6" /></button>
             </div>
 
-            {/* Premium Subscription Card */}
-            {isActivated && (
-              <div className="bg-gradient-to-br from-[#1c1236]/90 to-[#0f0a20]/95 rounded-3xl p-5 border border-brand-accent/30 shadow-[0_4px_25px_rgba(147,51,234,0.15)] relative overflow-hidden flex flex-col gap-3">
-                <div className="absolute top-0 right-0 bg-brand-accent text-white text-[8px] font-black uppercase tracking-widest px-2.5 py-1 rounded-bl-xl shadow-md">
-                  PREMIUM
-                </div>
-                
-                <div className="flex items-center gap-3" dir={isRtl ? 'rtl' : 'ltr'}>
-                  <div className="w-10 h-10 rounded-xl bg-brand-accent/20 border border-brand-accent/35 flex items-center justify-center animate-pulse">
-                    <Sparkles className="w-5 h-5 text-brand-accent" />
-                  </div>
-                  <div className={isRtl ? 'text-right' : 'text-left'}>
-                    <p className="text-xs font-bold text-white/50 uppercase tracking-wider leading-none">
-                      {language === 'Kurdish' ? 'دۆخی بەشداریکردن' : language === 'Badini' ? 'بارێ پشکداریێ' : language === 'Arabic' ? 'حالة الاشتراك' : 'Subscription Status'}
-                    </p>
-                    <p className="text-sm font-black text-brand-accent mt-1 leading-none">
-                      {activatedPeriod === '1month' 
-                        ? (language === 'Kurdish' ? 'بەشداریکردنی ١ مانگی' : language === 'Badini' ? 'پشکداریا ١ هەیڤی' : language === 'Arabic' ? 'اشتراك شهر واحد' : '1 Month Premium')
-                        : activatedPeriod === '6months'
-                        ? (language === 'Kurdish' ? 'بەشداریکردنی ٦ مانگی' : language === 'Badini' ? 'پشکداریا ٦ هەیڤی' : language === 'Arabic' ? 'اشتراك ٦ أشهر' : '6 Months Premium')
-                        : (language === 'Kurdish' ? 'بەشداریکردنی ١ ساڵیی' : language === 'Badini' ? 'پشکداریا ١ سالی' : language === 'Arabic' ? 'اشتراك سنة كاملة' : '1 Year Premium')}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="h-px bg-white/5 w-full my-1" />
-
-                <div className="grid grid-cols-2 gap-2 text-xs" dir={isRtl ? 'rtl' : 'ltr'}>
-                  <div className={`p-2.5 bg-black/20 rounded-xl border border-white/5 ${isRtl ? 'text-right' : 'text-left'}`}>
-                    <p className="text-[10px] font-bold text-white/40 uppercase tracking-wider">
-                      {language === 'Kurdish' ? 'چالاککراوە لە' : language === 'Badini' ? 'چالاککریە ل' : language === 'Arabic' ? 'تاريخ التفعيل' : 'Activated At'}
-                    </p>
-                    <p className="font-extrabold text-white mt-1">
-                      {new Date(activatedAt).toLocaleDateString()}
-                    </p>
-                  </div>
-                  <div className={`p-2.5 bg-black/20 rounded-xl border border-white/5 ${isRtl ? 'text-right' : 'text-left'}`}>
-                    <p className="text-[10px] font-bold text-white/40 uppercase tracking-wider">
-                      {language === 'Kurdish' ? 'ڕۆژانی ماوە' : language === 'Badini' ? 'رووژێن ماین' : language === 'Arabic' ? 'الأيام المتبقية' : 'Days Remaining'}
-                    </p>
-                    <p className="font-extrabold text-emerald-400 mt-1 flex items-baseline gap-1">
-                      {(() => {
-                        let durationDays = 180;
-                        if (activatedPeriod === '1month') durationDays = 30;
-                        else if (activatedPeriod === '1year') durationDays = 365;
-                        const expirationTime = activatedAt + (durationDays * 24 * 60 * 60 * 1000);
-                        const daysLeft = Math.ceil((expirationTime - Date.now()) / (24 * 60 * 60 * 1000));
-                        return daysLeft > 0 ? daysLeft : 0;
-                      })()} {language === 'Kurdish' ? 'ڕۆژ' : language === 'Badini' ? 'روژ' : language === 'Arabic' ? 'يوم' : 'Days'}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex justify-between items-center gap-2 mt-1">
-                  <span className="text-[9px] font-bold text-white/30 uppercase">
-                    {language === 'Kurdish' ? 'ئامێری پارێزراو' : language === 'Badini' ? 'ئامیرێ پاراستی' : language === 'Arabic' ? 'الربط الآمن للجهاز' : 'Secure Device Linked'}
-                  </span>
-                  <button 
-                    onClick={onDeactivate}
-                    className="text-[9px] font-black uppercase text-red-400 hover:text-red-300 transition-colors bg-red-400/10 hover:bg-red-400/20 px-2.5 py-1 rounded-lg border border-red-500/20 cursor-pointer animate-none"
-                  >
-                    {language === 'Kurdish' ? 'گۆڕینی کۆد / دەرچوون' : language === 'Badini' ? 'گوهارتنا کۆدی' : language === 'Arabic' ? 'تغيير الكود / إلغاء' : 'Change Code'}
-                  </button>
-                </div>
-              </div>
-            )}
+            {/* Premium Subscription Card Removed */}
 
             <div className="grid grid-cols-2 gap-3" dir={isRtl ? 'rtl' : 'ltr'}>
                {[

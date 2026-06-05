@@ -382,5 +382,12 @@ export const CHANNELS: Channel[] = [
     logo: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRlAIekGeai2lZCc95U1LXXEDlw04Xw0QPWKG3rD1ANFg&s=10',
     categories: ['Kurdish', 'General'],
     streamUrl: '/api/proxy?url=https://5a3ed7a72ed4b.streamlock.net/zagrostv/SMIL:myStream.smil/chunklist_w469474030_b1700000_sleng_t64MTA4MHA=.m3u8'
+  },
+  {
+    id: 'khak-tv',
+    name: 'Khak Tv',
+    logo: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQuTi0TarCvbDfQVuZdsYS2EYQcxGGSvOz3X-uos25ZzA&s',
+    categories: ['Kurdish', 'General'],
+    streamUrl: '/api/proxy?url=http://bblserver.ddns.net:1935/stream/khakhd/playlist.m3u8'
   }
 ];
