@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'motion/react';
-import { Search, Globe, Home, Info, X, ChevronLeft, LayoutGrid, MonitorPlay, Cast, Play, Download, Smartphone, RefreshCw, Sparkles, Bell, BellOff, Share, Compass, Plus, Tv, Megaphone, Phone, MessageCircle, Ghost, Youtube, Instagram, Music2, Key, ExternalLink, Check, Lock, CheckCircle } from 'lucide-react';
+import { Search, Globe, Home, Info, X, ChevronLeft, LayoutGrid, MonitorPlay, Cast, Play, Download, Smartphone, RefreshCw, Sparkles, Bell, BellOff, Share, Compass, Plus, Tv, Megaphone, Phone, MessageCircle, Ghost, Youtube, Instagram, Music2, Key, ExternalLink, Check, Lock, CheckCircle, Shield, ShieldAlert, Server, Wifi, Trash, Send, AlertTriangle } from 'lucide-react';
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import Hls from 'hls.js';
 import { Category, Language, Channel } from './types';
@@ -78,7 +78,7 @@ const isHlsUrl = (url: string) => {
   return false;
 };
 
-const PlayerView = ({ channel, onBack, onSelectChannel, t, allChannels, adsConfig, isRtl }: { channel: Channel, onBack: () => void, onSelectChannel: (c: Channel) => void, t: any, allChannels: Channel[], adsConfig: any, isRtl: boolean }) => {
+const PlayerView = ({ channel, onBack, onSelectChannel, t, allChannels, adsConfig, isRtl, proxyConfig }: { channel: Channel, onBack: () => void, onSelectChannel: (c: Channel) => void, t: any, allChannels: Channel[], adsConfig: any, isRtl: boolean, proxyConfig: { proxyType: 'local' | 'cloudflare'; cloudflareWorkerUrl: string } }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [error, setError] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -93,8 +93,13 @@ const PlayerView = ({ channel, onBack, onSelectChannel, t, allChannels, adsConfi
     if (channel.streamUrl.startsWith('/') || channel.streamUrl.startsWith('http://localhost') || channel.streamUrl.startsWith('https://localhost')) {
       return channel.streamUrl;
     }
+    if (proxyConfig && proxyConfig.proxyType === 'cloudflare') {
+      const workerUrl = proxyConfig.cloudflareWorkerUrl || 'https://ameditv.kurdiish.workers.dev';
+      const delimiter = workerUrl.includes('?') ? '&' : '?';
+      return `${workerUrl}${delimiter}url=${encodeURIComponent(channel.streamUrl)}`;
+    }
     return `/api/proxy?url=${encodeURIComponent(channel.streamUrl)}`;
-  }, [channel.streamUrl]);
+  }, [channel.streamUrl, proxyConfig]);
 
   useEffect(() => {
     setTvFocusedChId(channel.id);
@@ -393,7 +398,9 @@ const InfoModal = ({
   isActivated,
   activatedPeriod,
   activatedAt,
-  onDeactivate
+  onDeactivate,
+  proxyConfig,
+  onSaveProxyConfig
 }: {
   isOpen: boolean;
   onClose: () => void;
@@ -417,6 +424,8 @@ const InfoModal = ({
   activatedPeriod: '1month' | '6months' | '1year';
   activatedAt: number;
   onDeactivate: () => void;
+  proxyConfig: { proxyType: 'local' | 'cloudflare'; cloudflareWorkerUrl: string };
+  onSaveProxyConfig: (newConfig: { proxyType: 'local' | 'cloudflare'; cloudflareWorkerUrl: string }) => Promise<boolean>;
 }) => {
   const isRtl = language === 'Kurdish' || language === 'Badini' || language === 'Arabic';
 
@@ -428,10 +437,17 @@ const InfoModal = ({
   const [bcSubmitting, setBcSubmitting] = useState(false);
   const [bcMessage, setBcMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
+  // Streaming Proxy Server States
+  const [proxyType, setProxyType] = useState<'local' | 'cloudflare'>('local');
+  const [cloudflareWorkerUrl, setCloudflareWorkerUrl] = useState('https://ameditv.kurdiish.workers.dev');
+  const [savingProxy, setSavingProxy] = useState(false);
+  const [saveProxyMsg, setSaveProxyMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
   // Ad Management State
   const [isAdminUnlocked, setIsAdminUnlocked] = useState(false);
   const [pinInput, setPinInput] = useState('');
   const [badPin, setBadPin] = useState(false);
+  const [adminActiveTab, setAdminActiveTab] = useState<'proxy' | 'ads' | 'codes' | 'broadcast'>('proxy');
 
   // Form states local to InfoModal (preloaded from adsConfig)
   const [adsEnabled, setAdsEnabled] = useState(true);
@@ -506,6 +522,29 @@ const InfoModal = ({
       }
     }
   }, [adsConfig]);
+
+  // Synchronize when proxyConfig updates
+  useEffect(() => {
+    if (proxyConfig) {
+      setProxyType(proxyConfig.proxyType || 'local');
+      setCloudflareWorkerUrl(proxyConfig.cloudflareWorkerUrl || 'https://ameditv.kurdiish.workers.dev');
+    }
+  }, [proxyConfig]);
+
+  const handleSaveProxy = async () => {
+    setSavingProxy(true);
+    setSaveProxyMsg(null);
+    const success = await onSaveProxyConfig({
+      proxyType,
+      cloudflareWorkerUrl
+    });
+    setSavingProxy(false);
+    if (success) {
+      setSaveProxyMsg({ type: 'success', text: 'Proxy settings saved and synchronized!' });
+    } else {
+      setSaveProxyMsg({ type: 'error', text: 'Failed to save proxy settings.' });
+    }
+  };
 
   const handleUnlockAdmin = () => {
     if (pinInput === '2029') {
@@ -2524,6 +2563,30 @@ export default function App() {
     return false;
   };
 
+  const [proxyConfig, setProxyConfig] = useState<{ proxyType: 'local' | 'cloudflare'; cloudflareWorkerUrl: string }>({
+    proxyType: 'local',
+    cloudflareWorkerUrl: 'https://ameditv.kurdiish.workers.dev'
+  });
+
+  const handleSaveProxyConfig = async (newConfig: { proxyType: 'local' | 'cloudflare'; cloudflareWorkerUrl: string }) => {
+    try {
+      const response = await fetch('/api/proxy-config', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(newConfig)
+      });
+      if (response.ok) {
+        setProxyConfig(newConfig);
+        return true;
+      }
+    } catch (err) {
+      console.error('Failed to update proxy configuration:', err);
+    }
+    return false;
+  };
+
   const [activationConfig, setActivationConfig] = useState<{ requireActivation: boolean; validCodes: string[] }>({
     requireActivation: false,
     validCodes: ["AMEDI2029", "SAVAN10", "ACTIVE-TV"]
@@ -2731,6 +2794,18 @@ export default function App() {
       }
     };
 
+    const onProxyConfigUpdated = (e: MessageEvent) => {
+      try {
+        const data = JSON.parse(e.data);
+        if (data.config) {
+          setProxyConfig(data.config);
+          console.log('[SSE] Proxy configurations modified by admin in real-time!', data.config);
+        }
+      } catch (err) {
+        console.error('[SSE] Error processing proxy-config-updated:', err);
+      }
+    };
+
     eventSource.onerror = () => {
       // Quiet down standard automatic reconnections to ensure console remains pristine
       if (eventSource.readyState === EventSource.CONNECTING) {
@@ -2745,6 +2820,7 @@ export default function App() {
     eventSource.addEventListener('custom-announcement', onCustomAnnouncement as any);
     eventSource.addEventListener('ads-config-updated', onAdsConfigUpdated as any);
     eventSource.addEventListener('activation-config-updated', onActivationConfigUpdated as any);
+    eventSource.addEventListener('proxy-config-updated', onProxyConfigUpdated as any);
 
     return () => {
       eventSource.removeEventListener('channel-added', onAdded as any);
@@ -2752,6 +2828,7 @@ export default function App() {
       eventSource.removeEventListener('custom-announcement', onCustomAnnouncement as any);
       eventSource.removeEventListener('ads-config-updated', onAdsConfigUpdated as any);
       eventSource.removeEventListener('activation-config-updated', onActivationConfigUpdated as any);
+      eventSource.removeEventListener('proxy-config-updated', onProxyConfigUpdated as any);
       eventSource.close();
     };
   }, [language]);
@@ -3092,6 +3169,16 @@ export default function App() {
       }
 
       try {
+        const proxyRes = await fetch('/api/proxy-config');
+        if (proxyRes.ok) {
+          const proxyData = await proxyRes.json();
+          setProxyConfig(proxyData);
+        }
+      } catch (err) {
+        console.warn('Failed to load initial proxy configuration:', err);
+      }
+
+      try {
         const actRes = await fetch('/api/admin/activation-config');
         if (actRes.ok) {
           const actData = await actRes.json();
@@ -3397,6 +3484,7 @@ export default function App() {
             allChannels={channels}
             adsConfig={adsConfig}
             isRtl={isRtl}
+            proxyConfig={proxyConfig}
           />
         )}
       </AnimatePresence>
@@ -3452,6 +3540,8 @@ export default function App() {
           setIsActivated(false);
           setInfoModalOpen(false);
         }}
+        proxyConfig={proxyConfig}
+        onSaveProxyConfig={handleSaveProxyConfig}
       />
 
       <PwaInstallModal
