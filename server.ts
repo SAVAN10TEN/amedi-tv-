@@ -1003,7 +1003,27 @@ async function startServer() {
             proxyHeaders['CF-IPCountry'] = req.headers['cf-ipcountry'] as string;
           }
 
-          response = await fetch(targetStreamUrl, {
+          // Determine path to fetch: we support playing through cloudflare worker directly from server too
+          let fetchTargetUrl = targetStreamUrl;
+          if (proxyConfig.proxyType === 'cloudflare') {
+            let workerUrl = proxyConfig.cloudflareWorkerUrl || 'https://ameditv.kurdiish.workers.dev';
+            if (workerUrl && !workerUrl.startsWith('http://') && !workerUrl.startsWith('https://')) {
+              workerUrl = 'https://' + workerUrl;
+            }
+            try {
+              const workerUrlObj = new URL(workerUrl);
+              const workerBase = (workerUrlObj.pathname === '/' || workerUrlObj.pathname === '') 
+                ? `${workerUrlObj.origin}/proxy` 
+                : workerUrl;
+              const delimiter = workerBase.includes('?') ? '&' : '?';
+              fetchTargetUrl = `${workerBase}${delimiter}url=${encodeURIComponent(targetStreamUrl)}`;
+              console.log(`[Proxy Cloudflare Route] Fetching through Cloudflare Worker: ${fetchTargetUrl}`);
+            } catch (e) {
+              console.error("[Proxy Cloudflare Route Error]", e);
+            }
+          }
+
+          response = await fetch(fetchTargetUrl, {
             headers: proxyHeaders
           });
           if (response.ok) {
@@ -1019,6 +1039,38 @@ async function startServer() {
             continue;
           }
           throw e;
+        }
+      }
+
+      // If the primary fetch failed, and we aren't already using cloudflare, try an automatic Cloudflare Worker fallback
+      if ((!response || !response.ok) && proxyConfig.proxyType !== 'cloudflare') {
+        let workerUrl = proxyConfig.cloudflareWorkerUrl || 'https://ameditv.kurdiish.workers.dev';
+        if (workerUrl && !workerUrl.startsWith('http://') && !workerUrl.startsWith('https://')) {
+          workerUrl = 'https://' + workerUrl;
+        }
+        try {
+          const workerUrlObj = new URL(workerUrl);
+          const workerBase = (workerUrlObj.pathname === '/' || workerUrlObj.pathname === '') 
+            ? `${workerUrlObj.origin}/proxy` 
+            : workerUrl;
+          const delimiter = workerBase.includes('?') ? '&' : '?';
+          const fallbackFetchUrl = `${workerBase}${delimiter}url=${encodeURIComponent(targetStreamUrl)}`;
+          console.log(`[Proxy Fallback Auto-Route] Server direct fetch failed. Re-routing via Cloudflare Worker: ${fallbackFetchUrl}`);
+          
+          const proxyHeaders: Record<string, string> = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+            'Accept': '*/*',
+            'Accept-Language': 'en-US,en;q=0.9',
+          };
+          if (req.headers.range) {
+            proxyHeaders['Range'] = req.headers.range as string;
+          }
+          
+          response = await fetch(fallbackFetchUrl, {
+            headers: proxyHeaders
+          });
+        } catch (err: any) {
+          console.error(`[Proxy Fallback Failed] Cloudflare worker fallback failed as well:`, err.message || err);
         }
       }
 
