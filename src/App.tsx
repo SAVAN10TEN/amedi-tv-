@@ -94,7 +94,23 @@ const PlayerView = ({ channel, onBack, onSelectChannel, t, allChannels, adsConfi
       return channel.streamUrl;
     }
     if (proxyConfig && proxyConfig.proxyType === 'cloudflare') {
-      const workerUrl = proxyConfig.cloudflareWorkerUrl || 'https://ameditv.kurdiish.workers.dev';
+      let workerUrl = proxyConfig.cloudflareWorkerUrl || 'https://ameditv.kurdiish.workers.dev';
+      if (workerUrl && !workerUrl.startsWith('http://') && !workerUrl.startsWith('https://')) {
+        workerUrl = 'https://' + workerUrl;
+      }
+      try {
+        const parsed = new URL(workerUrl);
+        if (parsed.pathname === '/' || parsed.pathname === '') {
+          workerUrl = parsed.origin + '/proxy';
+        }
+      } catch (e) {
+        if (!workerUrl.includes('/proxy') && !workerUrl.includes('?')) {
+          if (workerUrl.endsWith('/')) {
+            workerUrl = workerUrl.slice(0, -1);
+          }
+          workerUrl = workerUrl + '/proxy';
+        }
+      }
       const delimiter = workerUrl.includes('?') ? '&' : '?';
       return `${workerUrl}${delimiter}url=${encodeURIComponent(channel.streamUrl)}`;
     }

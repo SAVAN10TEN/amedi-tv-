@@ -23,7 +23,7 @@ export default {
     }
 
     // Direct health check or root welcome page
-    if (urlObj.pathname === "/" || urlObj.pathname === "/health") {
+    if ((urlObj.pathname === "/" || urlObj.pathname === "/health") && !urlObj.searchParams.has("url")) {
       return new Response(
         JSON.stringify({
           status: "active",
@@ -41,8 +41,8 @@ export default {
       );
     }
 
-    // Route only CORS proxy requests
-    if (urlObj.pathname === "/proxy") {
+    // Route CORS proxy requests
+    if (urlObj.pathname === "/proxy" || urlObj.searchParams.has("url")) {
       let targetUrlStr = urlObj.searchParams.get("url");
       if (!targetUrlStr) {
         return new Response("Missing 'url' query parameter.", { status: 400 });
