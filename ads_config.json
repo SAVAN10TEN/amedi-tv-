@@ -1,0 +1,23 @@
+{
+  "adsEnabled": false,
+  "adSenseEnabled": false,
+  "adSenseAutoAdsEnabled": false,
+  "autoChangeAdsEnabled": false,
+  "autoChangeInterval": 10,
+  "adSenseClientId": "ca-pub-3940256099942544",
+  "adSenseSlotId": "1234567890",
+  "customBannerActive": false,
+  "customBanners": [
+    {
+      "id": "ad-banner-1",
+      "image": "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=1964&auto=format&fit=crop",
+      "url": "https://www.snapchat.com/add/savan10.ten?share_id=P_WZNoKBOyw&locale=en-US",
+      "title": "Google AdSense & Custom Ads Supported!",
+      "desc": "Advertise your Snapchat, business, or website here. Support Google AdSense and custom banner rotation. Tap/Click to contact Savan Amedi!"
+    }
+  ],
+  "placements": {
+    "belowCategories": false,
+    "insidePlayer": false
+  }
+}

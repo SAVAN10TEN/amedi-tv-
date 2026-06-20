@@ -1,7 +1,7 @@
-import { Channel, Category } from './types';
+import { Channel, Category, Episode } from './types';
 
 export const CATEGORIES: Category[] = [
-  'All', 'Kurdish', 'Arabic', 'General', 'News', 'Sports', 'Movies', 'Radio', 'Islamic', 'Kids'
+  'All', 'Kurdish', 'Badini', 'Arabic', 'General', 'News', 'Sports', 'Music', 'Radio', 'Islamic', 'Kids'
 ];
 
 export const CHANNELS: Channel[] = [
@@ -37,7 +37,7 @@ export const CHANNELS: Channel[] = [
     id: 'waar',
     name: 'WAR',
     logo: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSz-_1CZfSn2DQlFDm7dUuTdGPYtlIMFNgaLbvbk_0xAA&s=10',
-    categories: ['Kurdish', 'General'],
+    categories: ['Kurdish', 'General', 'Badini'],
     streamUrl: '/api/proxy?url=https://live.kwikmotion.com/waarmedialive/waarmedia.smil/playlist.m3u8'
   },
   {
@@ -156,7 +156,7 @@ export const CHANNELS: Channel[] = [
     id: 'parwarday-duhok',
     name: 'Parwarday Duhok',
     logo: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSUmScJbd_cYjJsOj3yUts3j-syG4A3V4061FDlh6s_ag&s=10',
-    categories: ['Kurdish', 'General'],
+    categories: ['Kurdish', 'General', 'Badini'],
     streamUrl: '/api/proxy?url=https://parwarda.unitedmixmedia.tv/Parwardayi_Duhok/tracks-v2a1/mono.m3u8'
   },
   {
@@ -191,14 +191,14 @@ export const CHANNELS: Channel[] = [
     id: 'mbc-2',
     name: 'MBC 2',
     logo: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSzUYnBDPnry1j6dPS7lxXD2DPlE0Z3PH1tSTdpXMs6HQ&s=10',
-    categories: ['Arabic', 'Movies'],
+    categories: ['Arabic', 'General'],
     streamUrl: '/api/proxy?url=http://154.58.202.18:8080/mbc2/mono.m3u8'
   },
   {
     id: 'mmn-movies',
     name: 'MMN Movies',
     logo: 'https://i.postimg.cc/633CQd70/MMNM.png',
-    categories: ['Kurdish', 'Movies'],
+    categories: ['Kurdish', 'General'],
     streamUrl: '/api/proxy?url=http://mmn.mypsx.net:1935/live/mmnhdmovies/playlist.m3u8'
   },
   {
@@ -293,6 +293,13 @@ export const CHANNELS: Channel[] = [
     streamUrl: '/api/proxy?url=https://liveeu-gcp.alkassdigital.net/alkass3-p/main.m3u8'
   },
   {
+    id: 'dubai-sports',
+    name: 'Dubai Sports',
+    logo: 'https://upload.wikimedia.org/wikipedia/commons/2/23/Dubai_Sports_logo_2011.png',
+    categories: ['Arabic', 'Sports'],
+    streamUrl: '/api/proxy?url=https://dmitv.mangomolo.com/dubaisports/smil:dubaisports.smil/playlist.m3u8'
+  },
+  {
     id: 'ufc',
     name: 'UFC',
     logo: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRkcFL0mWry_f4Pe69U2d_9UqXxgzcKnLhU_Dkuc0a3Ww&s=10',
@@ -331,14 +338,14 @@ export const CHANNELS: Channel[] = [
     id: 'barin-movies',
     name: 'Barin Movies',
     logo: 'https://i.imgur.com/bkJ5UwD_d.webp?maxwidth=760&fidelity=grand',
-    categories: ['Kurdish', 'Movies'],
+    categories: ['Kurdish', 'General'],
     streamUrl: '/api/proxy?url=https://cdn.karwan.tv/barin-movies/index.m3u8'
   },
   {
     id: 'bnar-movies',
     name: 'Bnar Movies',
     logo: 'https://i.imgur.com/66Fv1iQ.png',
-    categories: ['Kurdish', 'Movies'],
+    categories: ['Kurdish', 'General'],
     streamUrl: '/api/proxy?url=https://cdn.karwan.tv/bnar-movies/index.m3u8'
   },
   {
@@ -352,7 +359,7 @@ export const CHANNELS: Channel[] = [
     id: 'banar-action',
     name: 'Banar Action',
     logo: 'https://i.imgur.com/iQPySGB.png',
-    categories: ['Kurdish', 'Movies'],
+    categories: ['Kurdish', 'General'],
     streamUrl: '/api/proxy?url=https://cdn.karwan.tv/bnar-action/index.m3u8'
   },
   {
@@ -389,5 +396,80 @@ export const CHANNELS: Channel[] = [
     logo: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQuTi0TarCvbDfQVuZdsYS2EYQcxGGSvOz3X-uos25ZzA&s',
     categories: ['Kurdish', 'General'],
     streamUrl: '/api/proxy?url=http://bblserver.ddns.net:1935/stream/khakhd/playlist.m3u8'
+  }
+];
+
+const generateJirmendEpisodes = (): Episode[] => {
+  const episodes: Episode[] = [
+    { id: 'jirmend-ep1', number: 1, name: 'Episode 1 (خەلەکا ١)', streamUrl: 'https://ok.ru/video/15542393965207', duration: '24m', description: 'بڕیار و سەرکەفتنا دورانی سەبارەت شیکارکرنا مەتەلا بیرکارییێ یا ئێک ملیۆن دۆلاری.', image: 'https://i.postimg.cc/qtFRLWmg/image.png' },
+    { id: 'jirmend-ep2', number: 2, name: 'Episode 2 (خەلەکا ٢)', streamUrl: 'https://ok.ru/video/15551506090647', duration: '25m', description: 'بابێ دورانی (ئیسکەندەر) هەولددەت نێزیک ببیت بۆ تەڵەکەبۆکرنا بهورە و شیانێن وی.', image: 'https://i.postimg.cc/xXT1S9h2/image.png' },
+    { id: 'jirmend-ep3', number: 3, name: 'Episode 3 (خەلەکا ٣)', streamUrl: 'https://ok.ru/video/15575557278359', duration: '26m', description: 'دوران بڕیارێ ددەت کو شیانێن خۆ دژی پلانێن بابێ خۆ بکاربینیت و ڕووبەڕووی وی ببیت.', image: 'https://i.postimg.cc/gxk2PGQk/image.png' },
+    { id: 'jirmend-ep4', number: 4, name: 'Episode 4 (خەلەکا ٤)', streamUrl: 'https://ok.ru/video/15575687826071', duration: '22m', description: 'پەیوەندیێن خێزانی یێن ئالۆز پتر تێکدچن دەمێ ئیسکەندەر پلانەکا نوی دادەنیت.', image: 'https://i.postimg.cc/yDY8z7tB/image.png' },
+    { id: 'jirmend-ep5', number: 5, name: 'Episode 5 (خەلەکا ٥)', streamUrl: 'https://ok.ru/video/15575830301335', duration: '25m', description: 'دوران مەتەلەکا نوی یا ئالۆز شیکار دکەت کو کارتێکرنێ ل سەر پاشەڕۆژا وی دکەت.', image: 'https://i.postimg.cc/jDdSrRmS/image.png' }
+  ];
+
+  const descriptions = [
+    'دوران بڕیارێ ددەت کو شیانێن خۆ دژی پلانێن بابێ خۆ بکاربینیت و ڕووبەڕووی وی ببیت.',
+    'پەیوەندیێن خێزانی یێن ئالۆز پتر تێکدچن دەمێ ئیسکەندەر پلانەکا نوی دادەنیت.',
+    'دوران مەتەلەکا نوی یا ئالۆز شیکار دکەت کو کارتێکرنێ ل سەر پاشەڕۆژا وی دکەت.',
+    'هێزێن دژبەر هەولددەن نێزیکی دوران ببن بۆ ب دەستڤەئینانا بەهرەیا وی.',
+    'کێشەیێن خێزانی ل دۆر دوران سەر هەڵددەنەڤە و گۆشارەکا مەزن ل سەر دروست دبیت.',
+    'دوران ڕووبەڕووی بڕیارەکا چارەنڤیسساز دبیت کو ژیانا هەڤالێن وی دگهۆڕیت.',
+    'ئیسکەندەر ب هاریکاریا هەڤپشکێن خۆ هەولا دانانا پیلانێن نوی ددەت بەرامبەر دوران.',
+    'هێژ هەڤالێن نێزیک یێن دوران هەولددەن وی ژ مەترسیێن پیلانێن بابێ وی بپارێزن.',
+    'ڕووبەڕووبوونەوەیەکا بهێز د ناڤبەرا دوران و بابێ خۆ دا ل سەر دەسهەلاتێ ڕووددەت.',
+    'بەهرەیا بلیمەتیا بیرکارییێ دهێتە بکارئینان بۆ دیتنا چارەسەریێن ئاڵۆز د کاتەکێ کورت دا.',
+    'پلانێن ژێر تاق تێنە دیارکرن و گۆڕانکاریێن مەزن د ڕەوتێ درامایێ دا چێدبن.',
+    'ڕووبەڕووبوونەوە دگەل پلانێن نوی یێن ئیسکەندەری و بەردەوامیا کێبرکێیا دوران ب هێز دبن.'
+  ];
+
+  const toKurdishNumerals = (num: number): string => {
+    const kurdishDigits = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
+    return num
+      .toString()
+      .split('')
+      .map(char => {
+        const digit = parseInt(char, 10);
+        return isNaN(digit) ? char : kurdishDigits[digit];
+      })
+      .join('');
+  };
+
+  const today = new Date();
+  today.setHours(20, 0, 0, 0); // Release starting today at 8:00 PM (20:00)
+  const baseTime = today.getTime();
+
+  for (let i = 6; i <= 114; i++) {
+    const descIndex = (i - 6) % descriptions.length;
+    // Each scheduled episode is released exactly 1 day (24 hours) after the previous one
+    const releaseTime = baseTime + (i - 6) * 24 * 60 * 60 * 1000;
+    episodes.push({
+      id: `jirmend-ep${i}`,
+      number: i,
+      name: `Episode ${i} (خەلەکا ${toKurdishNumerals(i)})`,
+      streamUrl: '',
+      duration: `${22 + (i % 7)}m`,
+      description: descriptions[descIndex],
+      releaseTime
+    });
+  }
+
+  return episodes;
+};
+
+export const MOVIES: Channel[] = [
+  {
+    id: 'drama-jirmend',
+    name: 'ژیڕمەند',
+    logo: 'https://i.postimg.cc/NKJ41vSq/image.png',
+    banner: 'https://i.postimg.cc/NKJ41vSq/image.png',
+    categories: ['Kurdish', 'Drama', 'Badini'],
+    streamUrl: 'https://ok.ru/video/15542393965207',
+    isMovie: true,
+    year: '2024',
+    rating: '9.1/10',
+    duration: '114 Episodes',
+    description: 'درامایا ژیڕمەند (Deha) چیرۆکا دورانی ڤەدگێڕیت، گەنجەکێ زیرەک و بلیمەتێ بیرکارییێ کۆ دکاریت مەتەلەکا مەزنا بیرکارییێ شیکار بکەت، لێ ڕووبەڕووی پلان و پیلانێن بابێ خۆ (ئیسکەندەر) دبیت. (درامایا ژیڕمەند دۆبلاژکری ب زمانێ کوردی بادینی)',
+    episodes: generateJirmendEpisodes()
   }
 ];

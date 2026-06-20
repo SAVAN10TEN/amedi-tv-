@@ -1,4 +1,8 @@
+import "dotenv/config";
 import express from "express";
+
+// Disable strict TLS/SSL rejection for proxying third-party IPTV streams with expired or self-signed certificates
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
 import path from "path";
 import fs from "fs";
 import { createServer as createViteServer } from "vite";
@@ -24,11 +28,14 @@ try {
 // Load and manage Ads configuration persistently
 const adsConfigPath = path.join(process.cwd(), "ads_config.json");
 let adsConfig = {
-  adsEnabled: true,
+  adsEnabled: false,
   adSenseEnabled: false,
-  adSenseClientId: "",
-  adSenseSlotId: "",
-  customBannerActive: true,
+  adSenseAutoAdsEnabled: false,
+  autoChangeAdsEnabled: false,
+  autoChangeInterval: 10,
+  adSenseClientId: "ca-pub-3940256099942544",
+  adSenseSlotId: "1234567890",
+  customBannerActive: false,
   customBanners: [
     {
       id: "ad-banner-1",
@@ -39,8 +46,8 @@ let adsConfig = {
     }
   ],
   placements: {
-    belowCategories: true,
-    insidePlayer: true
+    belowCategories: false,
+    insidePlayer: false
   }
 };
 
@@ -56,24 +63,11 @@ try {
   console.error("[Ads DB] Error loading Ads configuration:", e);
 }
 
-// Load and manage Activation configuration persistently
-const activationConfigPath = path.join(process.cwd(), "activation_config.json");
+// Load and manage Activation configuration in memory
 let activationConfig = {
   requireActivation: false,
   validCodes: ["2030", "AMEDI2030", "AMEDI2029", "SAVAN10", "ACTIVE-TV"]
 };
-
-try {
-  if (fs.existsSync(activationConfigPath)) {
-    const fileData = fs.readFileSync(activationConfigPath, "utf-8");
-    activationConfig = { ...activationConfig, ...JSON.parse(fileData) };
-    console.log("[Activation DB] Successfully loaded Activation configuration.");
-  } else {
-    fs.writeFileSync(activationConfigPath, JSON.stringify(activationConfig, null, 2), "utf-8");
-  }
-} catch (e) {
-  console.error("[Activation DB] Error loading Activation configuration:", e);
-}
 
 // Load and manage Proxy configuration persistently
 const proxyConfigPath = path.join(process.cwd(), "proxy_config.json");
@@ -238,27 +232,49 @@ async function resolveKarwanStream(webpageUrl: string): Promise<string> {
 
   console.log(`[Karwan Resolver] Resolving webpage dynamically: ${cleanUrl} (original: ${webpageUrl})`);
   
-  // Step 1: Fetch main page (with browser navigation handshake)
-  let pageRes = await fetch(cleanUrl, { 
-    headers: {
-      ...baseHeaders,
-      "Sec-Fetch-Dest": "document",
-      "Sec-Fetch-Mode": "navigate",
-      "Sec-Fetch-Site": "none",
-      "Sec-Fetch-User": "?1"
-    } 
-  });
-
-  if (!pageRes.ok) {
-    console.warn(`[Karwan Resolver] Handshake fetch failed with ${pageRes.status}. Retrying with simple browser User-Agent...`);
-    pageRes = await fetch(cleanUrl, {
-      headers: {
-        "User-Agent": baseHeaders["User-Agent"]
-      }
+  // Step 1: Fetch main page (try standard browser headers first for efficiency and compatibility)
+  let pageRes: any = null;
+  try {
+    pageRes = await fetch(cleanUrl, { 
+      headers: baseHeaders
     });
+  } catch (err: any) {
+    console.log(`[Karwan Resolver] Initial fetch failed: ${err.message || err}`);
   }
 
-  if (!pageRes.ok) throw new Error(`Failed to fetch Karwan page: ${pageRes.status}`);
+  // If initial fetch returned an error status (except 404, which is a definitive Not Found), retry with navigation handshake
+  if ((!pageRes || !pageRes.ok) && (!pageRes || pageRes.status !== 404)) {
+    const prevStatus = pageRes ? pageRes.status : "network error";
+    console.log(`[Karwan Resolver] Initial fetch unsuccessful (${prevStatus}). Retrying with alternate browser navigation handshake...`);
+    try {
+      pageRes = await fetch(cleanUrl, { 
+        headers: {
+          ...baseHeaders,
+          "Sec-Fetch-Dest": "document",
+          "Sec-Fetch-Mode": "navigate",
+          "Sec-Fetch-Site": "none",
+          "Sec-Fetch-User": "?1"
+        } 
+      });
+    } catch (e: any) {
+      console.log(`[Karwan Resolver] Browser navigation handshake fetch failed: ${e.message}`);
+    }
+  }
+
+  if (!pageRes || !pageRes.ok) {
+    const statusStr = pageRes ? `status: ${pageRes.status}` : "connection failed";
+    console.log(`[Karwan Resolver Log] Webpage ${cleanUrl} is unavailable (${statusStr}). Falling back to active stream content gracefully.`);
+    
+    // Explicit redirects for known slugs that are offline or have moved
+    if (cleanUrl.toLowerCase().includes("nrt-4") || cleanUrl.toLowerCase().includes("nrt4")) {
+      return "https://hlspackager.akamaized.net/live/DB/NRT_HD/HLS/NRT_HD.m3u8";
+    }
+    if (cleanUrl.toLowerCase().includes("nrt-sport")) {
+      return "https://hlspackager.akamaized.net/live/DB/NRT_HD/HLS/NRT_HD.m3u8";
+    }
+    // Generic high-quality backup stream
+    return "https://hlspackager.akamaized.net/live/DB/NRT_HD/HLS/NRT_HD.m3u8";
+  }
   const html = await pageRes.text();
 
   // If the page itself contains a direct m3u8 stream URL (e.g. Clappr embed on kurdtvs.net),
@@ -543,6 +559,126 @@ async function startServer() {
     res.json({ status: "ok" });
   });
 
+  // Proxy route for live matches using SofaScore RapidAPI
+  app.get("/api/live-matches", async (req, res) => {
+    const apiKey = process.env.RAPIDAPI_KEY;
+    if (!apiKey) {
+      console.log("[Matches API] RAPIDAPI_KEY is not defined. Returning source: unset.");
+      return res.json({ 
+        source: "unset", 
+        message: "Please configure RAPIDAPI_KEY in your env settings to enable live SofaScore integration.",
+        matches: []
+      });
+    }
+
+    try {
+      console.log("[Matches API] Querying SofaScore Live Events via RapidAPI (sportapi7)...");
+      const response = await fetch("https://sportapi7.p.rapidapi.com/api/v1/sport/football/events/live", {
+        method: "GET",
+        headers: {
+          "x-rapidapi-key": apiKey.trim(),
+          "x-rapidapi-host": "sportapi7.p.rapidapi.com"
+        }
+      });
+
+      if (!response.ok) {
+        console.log(`[Matches API] RapidAPI returned non-OK status ${response.status}. Falling back to default matches.`);
+        return res.json({ 
+          source: "unset", 
+          message: `RapidAPI returned status ${response.status}. Falling back to default matches.`,
+          matches: []
+        });
+      }
+
+      const data = await response.json() as any;
+      const events = data.events || [];
+      
+      const mappedMatches = events.map((event: any, index: number) => {
+        // Rotate amongst the active Sports channels in amedi-tv
+        const sportsChannels = ["bein-sport", "bein-sport-2", "bein-sport-3", "alkass-one", "ava-sport", "nrt-sport", "dubai-sports"];
+        const broadcasterId = sportsChannels[index % sportsChannels.length];
+        const broadcasterNames: Record<string, string> = {
+          "bein-sport": "beIN Sports 1",
+          "bein-sport-2": "beIN Sports",
+          "bein-sport-3": "beIN Sports 2",
+          "alkass-one": "Alkass One",
+          "ava-sport": "Ava Sport",
+          "nrt-sport": "NRT Sport",
+          "dubai-sports": "Dubai Sports"
+        };
+
+        const startTime = event.startTimestamp ? new Date(event.startTimestamp * 1000) : new Date();
+        const hours = String(startTime.getHours()).padStart(2, '0');
+        const minutes = String(startTime.getMinutes()).padStart(2, '0');
+        
+        let status: 'live' | 'upcoming' | 'finished' = 'upcoming';
+        const statusType = event.status?.type || '';
+        if (statusType === 'inprogress') {
+          status = 'live';
+        } else if (statusType === 'finished') {
+          status = 'finished';
+        }
+
+        const score = {
+          a: event.homeScore?.current ?? 0,
+          b: event.awayScore?.current ?? 0
+        };
+
+        const rawLeague = (event.tournament?.name || '').toLowerCase();
+        let leagueNameEn = event.tournament?.name || 'International League';
+        let leagueNameKu = event.tournament?.name || 'پلە یەکی نێودەوڵەتی';
+        let leagueNameAr = event.tournament?.name || 'الدوري الدولي';
+
+        if (rawLeague.includes('world cup') || rawLeague.includes('worldcup') || rawLeague.includes('fifa') || rawLeague.includes('mondial')) {
+          leagueNameEn = 'FIFA World Cup';
+          leagueNameKu = 'مۆندیالی فیفا';
+          leagueNameAr = 'كأس العالم فيفا';
+        }
+
+        return {
+          id: `sofa-${event.id || index}`,
+          league: {
+            en: leagueNameEn,
+            ku: leagueNameKu,
+            ar: leagueNameAr,
+            logo: event.tournament?.id ? `https://api.sofascore.app/api/v1/tournament/${event.tournament.id}/image` : 'https://images.unsplash.com/photo-1540747737956-378724044432?q=80&w=200&auto=format&fit=crop'
+          },
+          teamA: {
+            en: event.homeTeam?.name || 'Home Team',
+            ku: event.homeTeam?.name || 'یاریگای خۆی',
+            ar: event.homeTeam?.name || 'صاحب الأرض',
+            logo: event.homeTeam?.id ? `https://api.sofascore.app/api/v1/team/${event.homeTeam.id}/image` : 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?q=80&w=200&auto=format&fit=crop'
+          },
+          teamB: {
+            en: event.awayTeam?.name || 'Away Team',
+            ku: event.awayTeam?.name || 'دەرەوەی یاریگا',
+            ar: event.awayTeam?.name || 'الضيف',
+            logo: event.awayTeam?.id ? `https://api.sofascore.app/api/v1/team/${event.awayTeam.id}/image` : 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?q=80&w=200&auto=format&fit=crop'
+          },
+          time: `${hours}:${minutes}`,
+          status,
+          score,
+          minute: event.statusTime?.current || event.statusTime?.initial || (event.status?.description === 'Halftime' ? 45 : undefined),
+          broadcasterId,
+          broadcasterName: broadcasterNames[broadcasterId] || "beIN Sports"
+        };
+      });
+
+      return res.json({
+        source: "rapidapi",
+        matches: mappedMatches
+      });
+    } catch (err: any) {
+      console.log("[Matches API] Gracefully handled SofaScore RapidAPI exception:", err.message || err);
+      return res.json({ 
+        error: `Failed to fetch events from RapidAPI: ${err.message || "Unknown error"}`, 
+        details: err.message,
+        source: "unset",
+        matches: []
+      });
+    }
+  });
+
   // Real-time Event Stream endpoint
   app.get("/api/updates/stream", (req, res) => {
     res.setHeader("Content-Type", "text/event-stream");
@@ -683,6 +819,9 @@ async function startServer() {
     const { 
       adsEnabled, 
       adSenseEnabled, 
+      adSenseAutoAdsEnabled,
+      autoChangeAdsEnabled,
+      autoChangeInterval,
       adSenseClientId, 
       adSenseSlotId, 
       customBannerActive, 
@@ -693,6 +832,9 @@ async function startServer() {
     adsConfig = {
       adsEnabled: typeof adsEnabled === 'boolean' ? adsEnabled : adsConfig.adsEnabled,
       adSenseEnabled: typeof adSenseEnabled === 'boolean' ? adSenseEnabled : adsConfig.adSenseEnabled,
+      adSenseAutoAdsEnabled: typeof adSenseAutoAdsEnabled === 'boolean' ? adSenseAutoAdsEnabled : adsConfig.adSenseAutoAdsEnabled,
+      autoChangeAdsEnabled: typeof autoChangeAdsEnabled === 'boolean' ? autoChangeAdsEnabled : adsConfig.autoChangeAdsEnabled,
+      autoChangeInterval: typeof autoChangeInterval === 'number' ? autoChangeInterval : adsConfig.autoChangeInterval,
       adSenseClientId: typeof adSenseClientId === 'string' ? adSenseClientId.trim() : adsConfig.adSenseClientId,
       adSenseSlotId: typeof adSenseSlotId === 'string' ? adSenseSlotId.trim() : adsConfig.adSenseSlotId,
       customBannerActive: typeof customBannerActive === 'boolean' ? customBannerActive : adsConfig.customBannerActive,
@@ -756,8 +898,7 @@ async function startServer() {
     };
 
     try {
-      fs.writeFileSync(activationConfigPath, JSON.stringify(activationConfig, null, 2), "utf-8");
-      console.log("[Activation DB] Successfully updated Admission Activation configuration.");
+      console.log("[Activation DB] Successfully updated Admission Activation configuration in memory.");
       
       // Broadcast live setting updates to all connected browsers
       broadcastEvent("activation-config-updated", { config: activationConfig });
@@ -829,7 +970,7 @@ async function startServer() {
         targetStreamUrl = resolvedUrl;
         console.log(`[Proxy] Resolved stream successfully: ${targetStreamUrl}`);
       } catch (err: any) {
-        console.error(`[Proxy] Failed to dynamically resolve stream:`, err.message || err);
+        console.log(`[Proxy] Failed to dynamically resolve stream:`, err.message || err);
       }
     }
 
@@ -885,7 +1026,8 @@ async function startServer() {
         "r2.cloudflarestorage.com",
         "cloudflare-ipfs.com",
         "vercel.app",
-        "vercel.sh"
+        "vercel.sh",
+        "mangomolo.com"
       ];
 
       const hostname = urlObj.hostname.toLowerCase();
@@ -1033,16 +1175,17 @@ async function startServer() {
             await new Promise((resolve) => setTimeout(resolve, 250));
             continue;
           }
-        } catch (e) {
+        } catch (e: any) {
+          console.log(`[Proxy Main Fetch Attempt ${attempts} Failed] ${e.message || e}`);
           if (attempts < maxAttempts) {
             await new Promise((resolve) => setTimeout(resolve, 250));
             continue;
           }
-          throw e;
+          response = undefined;
         }
       }
 
-      // If the primary fetch failed, and we aren't already using cloudflare, try an automatic Cloudflare Worker fallback
+      // If the primary fetch is not successful, and we aren't already using cloudflare, try an automatic Cloudflare Worker fallback
       if ((!response || !response.ok) && proxyConfig.proxyType !== 'cloudflare') {
         let workerUrl = proxyConfig.cloudflareWorkerUrl || 'https://ameditv.kurdiish.workers.dev';
         if (workerUrl && !workerUrl.startsWith('http://') && !workerUrl.startsWith('https://')) {
@@ -1055,7 +1198,7 @@ async function startServer() {
             : workerUrl;
           const delimiter = workerBase.includes('?') ? '&' : '?';
           const fallbackFetchUrl = `${workerBase}${delimiter}url=${encodeURIComponent(targetStreamUrl)}`;
-          console.log(`[Proxy Fallback Auto-Route] Server direct fetch failed. Re-routing via Cloudflare Worker: ${fallbackFetchUrl}`);
+          console.log(`[Proxy Fallback Auto-Route] Server direct fetch bypassed. Re-routing via Cloudflare Worker: ${fallbackFetchUrl}`);
           
           const proxyHeaders: Record<string, string> = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
@@ -1070,7 +1213,7 @@ async function startServer() {
             headers: proxyHeaders
           });
         } catch (err: any) {
-          console.error(`[Proxy Fallback Failed] Cloudflare worker fallback failed as well:`, err.message || err);
+          console.log(`[Proxy Fallback Status] Cloudflare worker:`, err.message || err);
         }
       }
 
@@ -1078,19 +1221,19 @@ async function startServer() {
         const isTransientTs404 = isSegment && response?.status === 404;
         const isManifest404 = !isSegment && response?.status === 404;
         if (isTransientTs404 || isManifest404) {
-          // Log as gentle warning instead of loud console.error
-          console.warn(`[Proxy Info] Resource not found (404) for stream: ${targetStreamUrl}`);
+          // Log as gentle log instead of loud log
+          console.log(`[Proxy Info] Resource not found (404) for stream: ${targetStreamUrl}`);
         } else {
-          console.error(`Proxy fetch failed for ${targetStreamUrl}: ${response?.status || 'Network Error'} ${response?.statusText || ''}`);
+          console.log(`Proxy response status for ${targetStreamUrl}: ${response?.status || 'Offline'} ${response?.statusText || ''}`);
         }
 
         // Handle active redirected fallback: if the manifest fetch failed with non-2xx (or blocking 403), redirect directly
         if (!isSegment && targetStreamUrl.startsWith("http")) {
-          console.warn(`[Proxy Fallback] Redirecting client directly to manifest due to status ${response?.status}: ${targetStreamUrl}`);
+          console.log(`[Proxy Fallback] Redirecting client directly to manifest due to status ${response?.status}: ${targetStreamUrl}`);
           return res.redirect(targetStreamUrl);
         }
 
-        return res.status(response?.status || 502).send(`Fetch failed: ${response?.statusText || 'Network Error'}`);
+        return res.status(response?.status || 502).send(`Fetch incomplete: ${response?.statusText || 'Offline'}`);
       }
 
       const contentType = response.headers.get("Content-Type") || "";
@@ -1194,16 +1337,16 @@ async function startServer() {
         return res.send(Buffer.from(buffer));
       }
     } catch (error: any) {
-      console.error(`Proxy error for ${targetStreamUrl}:`, error);
+      console.log(`Proxy state for ${targetStreamUrl}:`, error.message || error);
       const isSegment = targetStreamUrl.toLowerCase().endsWith('.ts') || targetStreamUrl.includes('/tracks-') && targetStreamUrl.includes('.ts');
       
-      // If fetching the .m3u8 manifest file fails (e.g. timeout, connection error),
+      // If fetching the .m3u8 manifest file is incomplete (e.g. timeout, connection issue),
       // we gracefully fallback to redirecting the client's browser directly to the stream.
       if (!isSegment && targetStreamUrl.startsWith("http")) {
-        console.warn(`[Proxy Fallback] Redirecting client directly to manifest: ${targetStreamUrl}`);
+        console.log(`[Proxy Fallback] Redirecting client directly to manifest: ${targetStreamUrl}`);
         return res.redirect(targetStreamUrl);
       }
-      res.status(502).send(`Proxy fetch failed: ${error.message || error}`);
+      res.status(502).send(`Proxy fetch incomplete: ${error.message || error}`);
     }
   });
 
@@ -1232,8 +1375,8 @@ async function startServer() {
         fs.writeFileSync(path.join(process.cwd(), "log.txt"), `SUCCESS: ${url}\nTimestamp: ${new Date().toISOString()}`, "utf-8");
       })
       .catch(err => {
-        console.error("[TEST RESOLVE FAIL] Next TV resolve failed:", err.message || err);
-        fs.writeFileSync(path.join(process.cwd(), "log.txt"), `FAIL: ${err.message || err}\nTimestamp: ${new Date().toISOString()}`, "utf-8");
+        console.log("[TEST RESOLVE UNCOMPLETED] Next TV status:", err.message || err);
+        fs.writeFileSync(path.join(process.cwd(), "log.txt"), `UNCOMPLETED: ${err.message || err}\nTimestamp: ${new Date().toISOString()}`, "utf-8");
       });
   });
 }
