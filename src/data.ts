@@ -405,7 +405,10 @@ const generateJirmendEpisodes = (): Episode[] => {
     { id: 'jirmend-ep2', number: 2, name: 'Episode 2 (خەلەکا ٢)', streamUrl: 'https://ok.ru/video/15551506090647', duration: '25m', description: 'بابێ دورانی (ئیسکەندەر) هەولددەت نێزیک ببیت بۆ تەڵەکەبۆکرنا بهورە و شیانێن وی.', image: 'https://i.postimg.cc/xXT1S9h2/image.png' },
     { id: 'jirmend-ep3', number: 3, name: 'Episode 3 (خەلەکا ٣)', streamUrl: 'https://ok.ru/video/15575557278359', duration: '26m', description: 'دوران بڕیارێ ددەت کو شیانێن خۆ دژی پلانێن بابێ خۆ بکاربینیت و ڕووبەڕووی وی ببیت.', image: 'https://i.postimg.cc/gxk2PGQk/image.png' },
     { id: 'jirmend-ep4', number: 4, name: 'Episode 4 (خەلەکا ٤)', streamUrl: 'https://ok.ru/video/15575687826071', duration: '22m', description: 'پەیوەندیێن خێزانی یێن ئالۆز پتر تێکدچن دەمێ ئیسکەندەر پلانەکا نوی دادەنیت.', image: 'https://i.postimg.cc/yDY8z7tB/image.png' },
-    { id: 'jirmend-ep5', number: 5, name: 'Episode 5 (خەلەکا ٥)', streamUrl: 'https://ok.ru/video/15575830301335', duration: '25m', description: 'دوران مەتەلەکا نوی یا ئالۆز شیکار دکەت کو کارتێکرنێ ل سەر پاشەڕۆژا وی دکەت.', image: 'https://i.postimg.cc/jDdSrRmS/image.png' }
+    { id: 'jirmend-ep5', number: 5, name: 'Episode 5 (خەلەکا ٥)', streamUrl: 'https://ok.ru/video/15575830301335', duration: '25m', description: 'دوران مەتەلەکا نوی یا ئالۆز شیکار دکەت کو کارتێکرنێ ل سەر پاشەڕۆژا وی دکەت.', image: 'https://i.postimg.cc/jDdSrRmS/image.png' },
+    { id: 'jirmend-ep6', number: 6, name: 'Episode 6 (خەلەکا ٦)', streamUrl: 'https://ok.ru/video/15633707043479', duration: '25m', description: 'دوران بڕیارێ ددەت کو شیانێن خۆ دژی پلانێن بابێ خۆ بکاربینیت و ڕووبەڕووی وی ببیت.', image: 'https://i.postimg.cc/0zn6LKGT/image.png' },
+    { id: 'jirmend-ep7', number: 7, name: 'Episode 7 (خەلەکا ٧)', streamUrl: 'https://ok.ru/video/15634028366487', duration: '26m', description: 'پەیوەندیێن خێزانی یێن ئالۆز پتر تێکدچن دەمێ ئیسکەندەر پلانەکا نوی دادەنیت.', image: 'https://i.postimg.cc/Z0fJtPXb/image.png' },
+    { id: 'jirmend-ep8', number: 8, name: 'Episode 8 (خەلەکا ٨)', streamUrl: '', duration: '25m', description: 'دوران مەتەلەکا نوی یا ئالۆز شیکار دکەت کو کارتێکرنێ ل سەر پاشەڕۆژا وی دکەت.', image: 'https://i.postimg.cc/Z0fJtPXb/image.png' }
   ];
 
   const descriptions = [
@@ -439,10 +442,10 @@ const generateJirmendEpisodes = (): Episode[] => {
   today.setHours(20, 0, 0, 0); // Release starting today at 8:00 PM (20:00)
   const baseTime = today.getTime();
 
-  for (let i = 6; i <= 114; i++) {
-    const descIndex = (i - 6) % descriptions.length;
+  for (let i = 9; i <= 114; i++) {
+    const descIndex = (i - 9) % descriptions.length;
     // Each scheduled episode is released exactly 1 day (24 hours) after the previous one
-    const releaseTime = baseTime + (i - 6) * 24 * 60 * 60 * 1000;
+    const releaseTime = baseTime + (i - 9) * 24 * 60 * 60 * 1000;
     episodes.push({
       id: `jirmend-ep${i}`,
       number: i,

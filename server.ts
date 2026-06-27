@@ -211,6 +211,39 @@ async function isHostVercelBacked(hostname: string, targetStreamUrl: string): Pr
   return false;
 }
 
+// Resolves moviebox.ph webpage URLs to their direct .mp4 streams dynamically.
+async function resolveMovieboxStream(webpageUrl: string): Promise<string> {
+  const baseHeaders = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+    "Accept-Language": "en-US,en;q=0.5",
+    "Upgrade-Insecure-Requests": "1"
+  };
+
+  console.log(`[Moviebox Resolver] Resolving moviebox webpage: ${webpageUrl}`);
+  const res = await fetch(webpageUrl, { headers: baseHeaders });
+  if (!res.ok) {
+    throw new Error(`Moviebox returned status ${res.status}`);
+  }
+  const html = await res.text();
+
+  // Find any URL matching macdn.aoneroom.com/media/vone/.*\.mp4
+  const mp4Match = html.match(/['"](https?:\/\/macdn\.aoneroom\.com\/media\/vone\/[^'"]+\.mp4[^'"]*)['"]/i) ||
+                   html.match(/['"](https?:\/\/[^'"]+\.mp4[^'"]*)['"]/i);
+  
+  if (mp4Match) {
+    return mp4Match[1];
+  }
+
+  // Fallback to find any link ending with .mp4
+  const fallbackMatch = html.match(/(https?:\/\/[^\s"'`]+\.mp4)/i);
+  if (fallbackMatch) {
+    return fallbackMatch[1];
+  }
+
+  throw new Error("Could not find any .mp4 stream on Moviebox page");
+}
+
 // Resolves karwan.tv webpage URLs to their dynamic HLS tokenized stream manifests dynamically at request time.
 async function resolveKarwanStream(webpageUrl: string): Promise<string> {
   const baseHeaders = {
@@ -444,12 +477,13 @@ async function resolveKarwanStream(webpageUrl: string): Promise<string> {
   const embedHtml = await embedRes.text();
 
   let phpHtml = "";
-  // Check if embedHtml is already the PHP live player frame by looking for stream matches inside it
-  const hasStreamMatch = embedHtml.match(/['"](https:\/\/[^'"]+\.(m3u8|mpd)[^'"]*)['"]/i) || 
-                         embedHtml.match(/src=["'](https:\/\/[^"']+\/embed\.html\?[^"']+)["']/i);
+  // Check if embedHtml is already the PHP live player frame by looking for stream matches inside it or if it's already a php file URL
+  const hasStreamMatch = embedHtml.match(/['"](https?:\/\/[^'"]+\.(m3u8|mpd)[^'"]*)['"]/i) || 
+                         embedHtml.match(/src=["'](https?:\/\/[^"']+\/embed\.html\?[^"']+)["']/i);
+  const isAlreadyPhp = embedUrl.toLowerCase().includes("/live/") || embedUrl.toLowerCase().includes(".php");
   
-  if (hasStreamMatch) {
-    console.log("[Karwan Resolver] embedHtml already contains the stream matches. Skipping Step 3.");
+  if (hasStreamMatch || isAlreadyPhp) {
+    console.log("[Karwan Resolver] embedHtml already contains the stream matches or is already the live PHP page. Skipping Step 3.");
     phpHtml = embedHtml;
   } else {
     // Find live PHP iframe, e.g. src="/live/nrt-sport-1.php"
@@ -494,10 +528,23 @@ async function resolveKarwanStream(webpageUrl: string): Promise<string> {
     phpHtml = await phpRes.text();
   }
 
-  // Find player URL/streams in the PHP frame
-  const mpdMatch = phpHtml.match(/['"](https:\/\/[^'"]+\.mpd[^'"]*)['"]/i);
-  const m3u8Match = phpHtml.match(/['"](https:\/\/[^'"]+\.m3u8[^'"]*)['"]/i);
-  const flussonicMatch = phpHtml.match(/src=["'](https:\/\/[^"']+\/embed\.html\?[^"']+)["']/i);
+  // Decode base64 atob blocks inside phpHtml if any to handle Javascript obfuscation
+  let decodedHtml = phpHtml;
+  const atobRegex = /atob\s*\(\s*["']([^"']+)["']\s*\)/g;
+  let match;
+  while ((match = atobRegex.exec(phpHtml)) !== null) {
+    try {
+      const decoded = Buffer.from(match[1], 'base64').toString('utf-8');
+      decodedHtml += "\n" + decoded;
+    } catch (e: any) {
+      console.log(`[Karwan Resolver] Failed to decode base64 segment: ${e.message}`);
+    }
+  }
+
+  // Find player URL/streams in the decoded PHP frame content
+  const mpdMatch = decodedHtml.match(/['"](https?:\/\/[^'"]+\.mpd[^'"]*)['"]/i);
+  const m3u8Match = decodedHtml.match(/['"](https?:\/\/[^'"]+\.m3u8[^'"]*)['"]/i);
+  const flussonicMatch = decodedHtml.match(/src=["'](https?:\/\/[^"']+\/embed\.html\?[^"']+)["']/i);
 
   let streamUrl = "";
   if (m3u8Match) {
@@ -942,6 +989,18 @@ async function startServer() {
 
     let targetStreamUrl = streamUrl;
 
+    if (streamUrl.includes("moviebox.ph")) {
+      try {
+        console.log(`[Proxy] Intercepting Moviebox webpage to resolve stream dynamically: ${streamUrl}`);
+        const resolvedUrl = await resolveMovieboxStream(streamUrl);
+        console.log(`[Proxy] Resolved Moviebox stream successfully: ${resolvedUrl}`);
+        targetStreamUrl = resolvedUrl;
+      } catch (err: any) {
+        console.log(`[Proxy] Failed to dynamically resolve Moviebox stream:`, err.message || err);
+        return res.status(500).send("Failed to resolve Moviebox stream: " + err.message);
+      }
+    }
+
     // Direct support for resolving karwan.tv and kurdtvs.net webpage URLs to their dynamic HLS index.m3u8 streams
     let isKarwanWebpage = false;
     try {
@@ -974,11 +1033,22 @@ async function startServer() {
       }
     }
 
-    // Direct streamlock or non-standard port (e.g. :444) bypass:
-    // Fetching them on cloud/server-side often results in connect timeouts due to cloud outbound firewalls or IP/port blocks (like port 444),
+    // Direct streamlock or non-standard port (e.g. :3001, :1935, :40, :444) bypass:
+    // Fetching them on cloud/server-side often results in connect timeouts due to cloud outbound firewalls or IP/port blocks,
     // while the client browser's residential connection connects and plays them perfectly with direct CORS response.
-    if (targetStreamUrl.includes("streamlock.net") || targetStreamUrl.includes(":444")) {
-      console.log(`[Proxy Bypassed] Streamlock or custom port (:444) URL detected. Gracefully redirecting browser client to: ${targetStreamUrl}`);
+    let shouldRedirect = false;
+    try {
+      const parsedUrl = new URL(targetStreamUrl);
+      const port = parsedUrl.port;
+      if (port && port !== "80" && port !== "443") {
+        shouldRedirect = true;
+      }
+    } catch (e) {
+      // Ignore URL parsing errors here
+    }
+
+    if (targetStreamUrl.includes("streamlock.net") || targetStreamUrl.includes(":444") || shouldRedirect) {
+      console.log(`[Proxy Bypassed] Streamlock or custom/non-standard port URL detected. Gracefully redirecting browser client to: ${targetStreamUrl}`);
       return res.redirect(targetStreamUrl);
     }
 
@@ -1008,6 +1078,7 @@ async function startServer() {
         "unitedmixmedia.tv",
         "alarabiya.net",
         "frequency.stream",
+        "aoneroom.com",
         "kwikmotion.com",
         "shams.tv",
         "ava2.store",
@@ -1242,6 +1313,12 @@ async function startServer() {
                            contentType.includes("application/vnd.apple.mpegurl") ||
                            contentType.includes("application/x-mpegurl");
 
+      const isBinaryStream = contentType.includes("video/") || 
+                             contentType.includes("audio/") || 
+                             targetStreamUrl.toLowerCase().endsWith(".mp4") || 
+                             targetStreamUrl.toLowerCase().endsWith(".ts") || 
+                             targetStreamUrl.toLowerCase().endsWith(".mkv");
+
       if (isM3U8Content) {
         let manifest = await response.text();
         const finalUrl = response.url || targetStreamUrl;
@@ -1281,6 +1358,25 @@ async function startServer() {
         res.set("Content-Type", "application/vnd.apple.mpegurl");
         res.set("Access-Control-Allow-Origin", "*");
         return res.send(rewrittenManifest);
+      } else if (isBinaryStream) {
+        if (response.headers.get("content-range")) {
+          res.set("Content-Range", response.headers.get("content-range")!);
+        }
+        if (response.headers.get("accept-ranges")) {
+          res.set("Accept-Ranges", response.headers.get("accept-ranges")!);
+        }
+        if (response.headers.get("content-length")) {
+          res.set("Content-Length", response.headers.get("content-length")!);
+        }
+        res.set("Content-Type", contentType || "application/octet-stream");
+        res.set("Access-Control-Allow-Origin", "*");
+        res.status(response.status);
+        if (response.body && typeof response.body.pipe === "function") {
+          return response.body.pipe(res);
+        } else {
+          const buffer = await response.arrayBuffer();
+          return res.send(Buffer.from(buffer));
+        }
       } else {
         // Fallback check for manifests mislabeled as octet-stream
         const buffer = await response.arrayBuffer();

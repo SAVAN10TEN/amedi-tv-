@@ -8,7 +8,7 @@ import Hls from 'hls.js';
 interface CountdownTimerProps {
   releaseTime?: number;
   language: Language;
-  size?: 'small' | 'large';
+  size?: 'small' | 'medium' | 'large';
 }
 
 const CountdownTimer = ({ releaseTime, language, size = 'small' }: CountdownTimerProps) => {
@@ -66,20 +66,21 @@ const CountdownTimer = ({ releaseTime, language, size = 'small' }: CountdownTime
   const m = toNativeDigits(minutesVal);
   const s = toNativeDigits(secondsVal);
 
-  if (size === 'large') {
+  if (size === 'large' || size === 'medium') {
+    const isMedium = size === 'medium';
     return (
-      <div className="flex flex-wrap items-center justify-center gap-3">
-        <div className="bg-amber-400/10 border border-amber-400/20 px-3.5 py-2 rounded-2xl min-w-[70px] text-center shadow-lg shadow-amber-500/5">
-          <span className="block text-2xl font-black text-amber-400 tracking-tight">{h}</span>
-          <span className="block text-[10px] text-amber-400/70 uppercase font-black tracking-widest mt-0.5">{t.hours}</span>
+      <div className="flex flex-wrap items-center justify-center gap-2.5">
+        <div className={`bg-amber-400/10 border border-amber-400/20 rounded-2xl text-center shadow-lg shadow-amber-500/5 ${isMedium ? 'px-3 py-1.5 min-w-[58px]' : 'px-3.5 py-2 min-w-[70px]'}`}>
+          <span className={`block font-black text-amber-400 tracking-tight ${isMedium ? 'text-xl' : 'text-2xl'}`}>{h}</span>
+          <span className="block text-[9px] text-amber-400/70 uppercase font-black tracking-widest mt-0.5">{t.hours}</span>
         </div>
-        <div className="bg-amber-400/10 border border-amber-400/20 px-3.5 py-2 rounded-2xl min-w-[70px] text-center shadow-lg shadow-amber-500/5">
-          <span className="block text-2xl font-black text-amber-400 tracking-tight">{m}</span>
-          <span className="block text-[10px] text-amber-400/70 uppercase font-black tracking-widest mt-0.5">{t.minutes}</span>
+        <div className={`bg-amber-400/10 border border-amber-400/20 rounded-2xl text-center shadow-lg shadow-amber-500/5 ${isMedium ? 'px-3 py-1.5 min-w-[58px]' : 'px-3.5 py-2 min-w-[70px]'}`}>
+          <span className={`block font-black text-amber-400 tracking-tight ${isMedium ? 'text-xl' : 'text-2xl'}`}>{m}</span>
+          <span className="block text-[9px] text-amber-400/70 uppercase font-black tracking-widest mt-0.5">{t.minutes}</span>
         </div>
-        <div className="bg-amber-400/10 border border-amber-400/20 px-3.5 py-2 rounded-2xl min-w-[70px] text-center shadow-lg shadow-amber-500/5 animate-pulse">
-          <span className="block text-2xl font-black text-amber-400 tracking-tight">{s}</span>
-          <span className="block text-[10px] text-amber-400/70 uppercase font-black tracking-widest mt-0.5">{t.seconds}</span>
+        <div className={`bg-amber-400/10 border border-amber-400/20 rounded-2xl text-center shadow-lg shadow-amber-500/5 animate-pulse ${isMedium ? 'px-3 py-1.5 min-w-[58px]' : 'px-3.5 py-2 min-w-[70px]'}`}>
+          <span className={`block font-black text-amber-400 tracking-tight ${isMedium ? 'text-xl' : 'text-2xl'}`}>{s}</span>
+          <span className="block text-[9px] text-amber-400/70 uppercase font-black tracking-widest mt-0.5">{t.seconds}</span>
         </div>
       </div>
     );
@@ -149,7 +150,8 @@ const isDirectVideoUrl = (url: string) => {
     lowerUrl.includes('.m3u8') ||
     lowerUrl.includes('.webm') ||
     lowerUrl.includes('.ogg') ||
-    lowerUrl.includes('.mov')
+    lowerUrl.includes('.mov') ||
+    lowerUrl.includes('moviebox')
   );
 };
 
@@ -344,7 +346,7 @@ export const MoviesModal = ({ isOpen, onClose, language }: MoviesModalProps) => 
                            'ئەم درامایە هەموو شەوێک کاژێر 8:00ی ئێوارە بڵاودەکرێتەوە.'}
                         </p>
                         <div className="mt-5">
-                          <CountdownTimer releaseTime={activeEpisode.releaseTime!} language={language} size="large" />
+                          <CountdownTimer releaseTime={activeEpisode.releaseTime!} language={language} size="medium" />
                         </div>
                       </div>
                     );

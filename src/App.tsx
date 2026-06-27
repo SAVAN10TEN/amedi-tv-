@@ -776,17 +776,6 @@ const PlayerView = ({ channel, onBack, onSelectChannel, t, allChannels, adsConfi
             />
           )}
 
-          {!isYouTube && isPaused && (
-            <div 
-              onClick={togglePlay}
-              className="absolute inset-0 bg-black/45 flex items-center justify-center cursor-pointer z-20 transition-all backdrop-blur-[2px]"
-            >
-              <div className="w-20 h-20 rounded-full bg-brand-accent text-white flex items-center justify-center shadow-2xl scale-110 active:scale-100 transition-all duration-200">
-                <Play className="w-10 h-10 fill-current translate-x-1" />
-              </div>
-            </div>
-          )}
-
           {channelInputNumber && (
             <div className="absolute top-24 right-8 bg-brand-accent/95 text-white font-black text-4xl px-7 py-4 rounded-[24px] border border-white/20 shadow-2xl animate-bounce backdrop-blur-md z-50 flex items-center gap-4">
               <Tv className="w-9 h-9 text-white animate-pulse" />
