@@ -23,6 +23,16 @@ jobs:
           distribution: 'temurin'
           cache: gradle
 
+      - name: Ensure Gradle Wrapper Jar exists
+        run: |
+          if [ ! -f gradle/wrapper/gradle-wrapper.jar ]; then
+            echo "Gradle wrapper jar missing. Downloading..."
+            mkdir -p gradle/wrapper
+            curl -L -o gradle/wrapper/gradle-wrapper.jar https://raw.githubusercontent.com/gradle/gradle/v8.2.0/gradle/wrapper/gradle-wrapper.jar
+          else
+            echo "Gradle wrapper jar exists."
+          fi
+
       - name: Fix line endings for gradlew
         run: sed -i 's/\r$//' gradlew
 

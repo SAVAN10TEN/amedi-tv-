@@ -606,6 +606,122 @@ async function startServer() {
     res.json({ status: "ok" });
   });
 
+  // Support APK Download
+  app.get("/amedi-tv.apk", (req, res) => {
+    const pathsToSearch = [
+      path.join(process.cwd(), "app/build/outputs/apk/debug/app-debug.apk"),
+      path.join(process.cwd(), "public/amedi-tv.apk"),
+      path.join(process.cwd(), "amedi-tv.apk"),
+      path.join(process.cwd(), "app-debug.apk"),
+    ];
+
+    for (const apkPath of pathsToSearch) {
+      if (fs.existsSync(apkPath)) {
+        console.log(`[APK Download] Serving APK file from: ${apkPath}`);
+        res.setHeader("Content-Type", "application/vnd.android.package-archive");
+        res.setHeader("Content-Disposition", "attachment; filename=amedi-tv.apk");
+        return res.sendFile(apkPath);
+      }
+    }
+
+    // Fallback: If no APK is physically built on this server, serve a nice HTML instruction page
+    res.status(404).send(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Download Amedi TV APK</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <style>
+          body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+            background-color: #0F172A; 
+            color: #FFFFFF; 
+            text-align: center; 
+            padding: 40px 20px; 
+            margin: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            box-sizing: border-box;
+          }
+          .container { 
+            max-width: 500px; 
+            width: 100%;
+            background: #1E293B; 
+            border-radius: 24px; 
+            padding: 40px 30px; 
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 8px 10px -6px rgba(0, 0, 0, 0.3); 
+            border: 1px solid #334155; 
+          }
+          .icon {
+            font-size: 48px;
+            margin-bottom: 20px;
+          }
+          h1 { 
+            color: #3B82F6; 
+            margin-top: 0; 
+            font-size: 24px;
+            font-weight: 800;
+          }
+          p { 
+            line-height: 1.6; 
+            color: #94A3B8; 
+            font-size: 15px;
+          }
+          .btn { 
+            display: inline-block; 
+            background-color: #3B82F6; 
+            color: white; 
+            padding: 14px 28px; 
+            border-radius: 12px; 
+            text-decoration: none; 
+            font-weight: bold; 
+            margin-top: 25px; 
+            transition: all 0.2s; 
+            font-size: 14px;
+          }
+          .btn:hover { 
+            background-color: #2563EB; 
+            transform: translateY(-1px);
+          }
+          .code { 
+            background: #0F172A; 
+            padding: 16px; 
+            border-radius: 12px; 
+            font-family: monospace; 
+            text-align: left; 
+            font-size: 12px; 
+            color: #38BDF8; 
+            margin-top: 20px; 
+            border: 1px solid #334155; 
+            line-height: 1.7;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="icon">🤖</div>
+          <h1>Amedi TV APK</h1>
+          <p>The Android APK file was not found on this web server yet.</p>
+          <p>Since this app has <strong>GitHub Actions</strong> integrated, you can download the built APK directly from your GitHub Repository's Artifacts page!</p>
+          <div class="code">
+            <strong>How to enable direct download here:</strong><br>
+            1. Download the built <strong>app-debug.apk</strong> from your GitHub Actions run.<br>
+            2. Place the APK file inside the project root or the public/ directory as <strong>amedi-tv.apk</strong>.<br>
+            3. Deploy or commit to server so visitors can download it instantly!
+          </div>
+          <a href="/" class="btn">Back to Web App</a>
+        </div>
+      </body>
+      </html>
+    `);
+  });
+
+  app.get("/app-debug.apk", (req, res) => {
+    res.redirect("/amedi-tv.apk");
+  });
+
   // Proxy route for live matches using SofaScore RapidAPI
   app.get("/api/live-matches", async (req, res) => {
     const apiKey = process.env.RAPIDAPI_KEY;

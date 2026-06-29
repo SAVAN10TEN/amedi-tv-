@@ -1117,6 +1117,22 @@ const PwaInstallModal = ({ isOpen, onClose, t, isIos, language }: { isOpen: bool
 
             {/* iOS installation via PWA is shown in the platform steps above */}
 
+            {(selectedPlatform === 'android_pc' || selectedPlatform === 'tv') && (
+              <a
+                href="/amedi-tv.apk"
+                download="amedi-tv.apk"
+                className="py-3.5 w-full rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs tracking-widest uppercase transition-all shadow-lg text-center flex items-center justify-center gap-2 active:scale-[0.98]"
+              >
+                <Download className="w-4 h-4 animate-bounce" />
+                {language === 'English' 
+                  ? 'Download APK' 
+                  : language === 'Arabic' 
+                    ? 'تحميل ملف APK' 
+                    : language === 'Badini'
+                      ? 'داگرتنا فایلی APK'
+                      : 'دابەزاندنی فایلی APK'}
+              </a>
+            )}
 
             <button
               onClick={onClose}

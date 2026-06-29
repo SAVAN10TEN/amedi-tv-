@@ -68,9 +68,30 @@ class MainActivity : AppCompatActivity() {
         val defaultUserAgent = settings.userAgentString
         settings.userAgentString = "$defaultUserAgent AmediTVAndroidApp/1.0"
 
+        // Handle file downloads inside the WebView (especially APK files)
+        webView.setDownloadListener { url, _, _, _, _ ->
+            try {
+                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+                startActivity(intent)
+            } catch (e: Exception) {
+                // Fallback or ignore
+            }
+        }
+
         webView.webViewClient = object : WebViewClient() {
             override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
                 val url = request?.url?.toString() ?: return false
+                
+                // If the URL is an APK file, open it in default browser to trigger download & installation
+                if (url.endsWith(".apk", ignoreCase = true) || url.contains("/amedi-tv.apk") || url.contains("/app-debug.apk")) {
+                    try {
+                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+                        startActivity(intent)
+                        return true
+                    } catch (e: Exception) {
+                        // ignore and let webview handle it
+                    }
+                }
                 
                 // Keep navigation within our app's domain
                 if (url.startsWith(appUrl) || url.contains("ais-dev") || url.contains("ais-pre") || url.contains("localhost")) {
