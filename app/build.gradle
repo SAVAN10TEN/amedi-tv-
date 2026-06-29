@@ -7,7 +7,7 @@ android {
     namespace 'com.amedi.tv'
     compileSdk 34
 
-    {
+    defaultConfig {
         applicationId "com.amedi.tv"
         minSdk 21
         targetSdk 34
