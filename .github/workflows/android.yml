@@ -13,6 +13,21 @@ jobs:
       - name: Checkout source
         uses: actions/checkout@v4
 
+      # ١. جێگیرکرنا Node.js بۆ کۆمپاڵکرنا کۆدێ ڕێئاکت/ڤایت
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      # ٢. دابەزاندنی پاGroup و کتێبخانەیێن پڕۆژەی
+      - name: Install Dependencies
+        run: npm install
+
+      # ٣. دروستکرنا فۆڵدەرێ ڕێپێدراو (dist/www) بۆ پڕۆژەی
+      - name: Build Web Assets
+        run: npm run build
+
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
@@ -22,13 +37,13 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      # ١. نەچارکرنا سیستەمی بۆ دابەزاندنا وەشانا دروست و جێگیر (8.0) ل شوینا 9.6
+      # ٤. دابەزاندنا وەشانا جێگیر یا Gradle (8.0)
       - name: Setup Gradle Build Tool
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.0'
 
-      # ٢. ئەنجامدانی Build ڕاستەوخۆ ب وەشانا 8.0
+      # ٥. ئەنجامدانی Build بۆ پڕۆژەی
       - name: Build Debug APK
         run: gradle assembleDebug --stacktrace
 
@@ -37,3 +52,4 @@ jobs:
         with:
           name: app-debug-apk
           path: app/build/outputs/apk/debug/app-debug.apk
+
