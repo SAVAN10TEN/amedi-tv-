@@ -13,18 +13,17 @@ jobs:
       - name: Checkout source
         uses: actions/checkout@v4
 
-      # ١. جێگیرکرنا Node.js بۆ کۆمپاڵکرنا کۆدێ ڕێئاکت/ڤایت
+      # ١. جێگیرکرنا Node.js بێی پشتبەستن ل سەر فایلی lock
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: 'npm'
 
-      # ٢. دابەزاندنی پاGroup و کتێبخانەیێن پڕۆژەی
+      # ٢. دابەزاندنی کتێبخانەیێن پڕۆژەی
       - name: Install Dependencies
         run: npm install
 
-      # ٣. دروستکرنا فۆڵدەرێ ڕێپێدراو (dist/www) بۆ پڕۆژەی
+      # ٣. دروستکرنا فۆڵدەرێ ویب (dist)
       - name: Build Web Assets
         run: npm run build
 
@@ -52,4 +51,4 @@ jobs:
         with:
           name: app-debug-apk
           path: app/build/outputs/apk/debug/app-debug.apk
-
+          
