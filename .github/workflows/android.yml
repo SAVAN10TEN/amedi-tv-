@@ -22,22 +22,15 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      # ١. جێگیرکرنا وەشانا ناڤەندی یا Gradle
-      - name: Setup Gradle
+      # ١. نەچارکرنا سیستەمی بۆ دابەزاندنا وەشانا دروست و جێگیر (8.0) ل شوینا 9.6
+      - name: Setup Gradle Build Tool
         uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.0'
 
-      # ٢. دروستکرنا فایلێن Wrapper ب وەشانا کێمتر و گونجاوتر (7.5)
-      - name: Regenerate Gradle Wrapper Files
-        run: |
-          gradle wrapper --gradle-version 7.5
-
-      # ٣. پێدانی دەسھلات بە فایلی gradlew یێ نوو
-      - name: Grant execute permission for gradlew
-        run: chmod +x gradlew
-
-      # ٤. ئەنجامدانی Build بۆ پڕۆژەی
+      # ٢. ئەنجامدانی Build ڕاستەوخۆ ب وەشانا 8.0
       - name: Build Debug APK
-        run: ./gradlew assembleDebug --stacktrace
+        run: gradle assembleDebug --stacktrace
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
