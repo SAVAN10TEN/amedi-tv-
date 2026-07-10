@@ -718,6 +718,99 @@ async function startServer() {
     `);
   });
 
+  // Support IPA Download / Instructions for iOS
+  app.get("/amedi-tv.ipa", (req, res) => {
+    const pathsToSearch = [
+      path.join(process.cwd(), "public/amedi-tv.ipa"),
+      path.join(process.cwd(), "amedi-tv.ipa"),
+    ];
+
+    for (const ipaPath of pathsToSearch) {
+      if (fs.existsSync(ipaPath)) {
+        console.log(`[IPA Download] Serving IPA file from: ${ipaPath}`);
+        res.setHeader("Content-Type", "application/octet-stream");
+        res.setHeader("Content-Disposition", "attachment; filename=amedi-tv.ipa");
+        return res.sendFile(ipaPath);
+      }
+    }
+
+    res.status(404).send(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Download Amedi TV iOS App (IPA)</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <style>
+          body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+            background-color: #0F172A; 
+            color: #FFFFFF; 
+            text-align: center; 
+            padding: 40px 20px; 
+            margin: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            box-sizing: border-box;
+          }
+          .container { 
+            max-width: 500px; 
+            width: 100%;
+            background: #1E293B; 
+            border-radius: 24px; 
+            padding: 40px 30px; 
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 8px 10px -6px rgba(0, 0, 0, 0.3); 
+            border: 1px solid #334155; 
+          }
+          .icon { font-size: 48px; margin-bottom: 20px; }
+          h1 { color: #3B82F6; margin-top: 0; font-size: 24px; font-weight: 800; }
+          p { line-height: 1.6; color: #94A3B8; font-size: 15px; }
+          .btn { 
+            display: inline-block; 
+            background-color: #3B82F6; 
+            color: white; 
+            padding: 14px 28px; 
+            border-radius: 12px; 
+            text-decoration: none; 
+            font-weight: bold; 
+            margin-top: 25px; 
+            transition: all 0.2s; 
+            font-size: 14px;
+          }
+          .btn:hover { background-color: #2563EB; transform: translateY(-1px); }
+          .code { 
+            background: #0F172A; 
+            padding: 16px; 
+            border-radius: 12px; 
+            font-family: monospace; 
+            text-align: left; 
+            font-size: 12px; 
+            color: #38BDF8; 
+            margin-top: 20px; 
+            border: 1px solid #334155; 
+            line-height: 1.7;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="icon">🍎</div>
+          <h1>Amedi TV iOS App (IPA)</h1>
+          <p>The iOS IPA package is ready for direct installation or sideloading via AltStore, Sideloadly, or Xcode.</p>
+          <div class="code">
+            <strong>How to install on iOS:</strong><br>
+            1. Open Safari on your iPhone/iPad and add to Home Screen for instant PWA Web App mode.<br>
+            2. Or place your built <strong>amedi-tv.ipa</strong> in the <strong>public/</strong> directory for direct download.<br>
+            3. Use AltStore or Sideloadly to install the IPA file on your iOS device.
+          </div>
+          <a href="/" class="btn">Back to Web App</a>
+        </div>
+      </body>
+      </html>
+    `);
+  });
+
   app.get("/app-debug.apk", (req, res) => {
     res.redirect("/amedi-tv.apk");
   });

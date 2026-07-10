@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'motion/react';
-import { Clock, Settings, Search, Globe, Home, Info, X, ChevronLeft, LayoutGrid, MonitorPlay, Cast, Play, Download, Smartphone, RefreshCw, Sparkles, Bell, BellOff, Share, Compass, Plus, Tv, Megaphone, Phone, MessageCircle, Ghost, Youtube, Instagram, Music2, Key, ExternalLink, Check, Lock, CheckCircle, Shield, ShieldAlert, Server, Wifi, Trash, Trash2, Send, AlertTriangle, Mic, Trophy, Film, Star, Calendar } from 'lucide-react';
+import { Clock, Settings, Search, Globe, Home, Info, X, ChevronLeft, LayoutGrid, MonitorPlay, Cast, Play, Download, Smartphone, RefreshCw, Sparkles, Bell, BellOff, Share, Compass, Plus, Tv, Megaphone, Phone, MessageCircle, Ghost, Youtube, Instagram, Music2, Key, ExternalLink, Check, Lock, CheckCircle, Shield, ShieldAlert, Server, Wifi, Trash, Trash2, Send, AlertTriangle, Mic, Trophy, Film, Star, Calendar, Minimize2, Maximize2, PictureInPicture2 } from 'lucide-react';
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import Hls from 'hls.js';
 import { Category, Language, Channel } from './types';
@@ -8,6 +8,7 @@ import { InfoModal } from './components/InfoModal';
 import { SettingsModal } from './components/SettingsModal';
 import { VoiceAssistant } from './components/VoiceAssistant';
 import { MoviesModal } from './components/MoviesModal';
+import { AddChannelModal } from './components/AddChannelModal';
 
 // --- Subcomponents ---
 
@@ -455,7 +456,92 @@ const getYouTubeEmbedUrl = (url: string) => {
   return id ? `https://www.youtube.com/embed/${id}?autoplay=1&mute=0&rel=0` : url;
 };
 
-const PlayerView = ({ channel, onBack, onSelectChannel, t, allChannels, adsConfig, isRtl, proxyConfig }: { channel: Channel, onBack: () => void, onSelectChannel: (c: Channel) => void, t: any, allChannels: Channel[], adsConfig: any, isRtl: boolean, proxyConfig: { proxyType: 'local' | 'cloudflare'; cloudflareWorkerUrl: string } }) => {
+const MiniPlayer = ({ channel, onExpand, onClose, t, proxyConfig }: { channel: Channel, onExpand: () => void, onClose: () => void, t: any, proxyConfig: any }) => {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const isYouTube = channel.streamUrl?.includes('youtube.com') || channel.streamUrl?.includes('youtu.be');
+
+  const resolvedUrl = useMemo(() => {
+    if (!channel.streamUrl) return '';
+    if (channel.streamUrl.startsWith('https://ameditv.kurdiish.workers.dev') || channel.streamUrl.startsWith('/') || channel.streamUrl.startsWith('http')) {
+      return channel.streamUrl;
+    }
+    return `/api/proxy?url=${encodeURIComponent(channel.streamUrl)}`;
+  }, [channel.streamUrl]);
+
+  useEffect(() => {
+    if (isYouTube) return;
+    let hls: Hls | null = null;
+    const video = videoRef.current;
+    if (video && resolvedUrl) {
+      if (Hls.isSupported() && isHlsUrl(resolvedUrl)) {
+        hls = new Hls({ enableWorker: true, lowLatencyMode: true });
+        hls.loadSource(resolvedUrl);
+        hls.attachMedia(video);
+        hls.on(Hls.Events.MANIFEST_PARSED, () => {
+          video.play().catch(() => {});
+        });
+      } else {
+        video.src = resolvedUrl;
+        video.play().catch(() => {});
+      }
+    }
+    return () => {
+      if (hls) hls.destroy();
+    };
+  }, [resolvedUrl, isYouTube]);
+
+  return (
+    <motion.div 
+      initial={{ opacity: 0, scale: 0.9, y: 20 }}
+      animate={{ opacity: 1, scale: 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.9, y: 20 }}
+      className="fixed bottom-24 right-6 z-50 w-80 h-48 bg-black/95 rounded-2xl overflow-hidden shadow-2xl border border-white/20 backdrop-blur-md flex flex-col group"
+    >
+      <div className="absolute top-0 left-0 right-0 p-2 flex items-center justify-between z-10 bg-gradient-to-b from-black/80 to-transparent opacity-90 group-hover:opacity-100 transition-opacity">
+        <div className="flex items-center gap-2">
+          <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+          <span className="text-xs font-bold text-white line-clamp-1">{channel.name}</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <button 
+            onClick={onExpand}
+            className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors"
+            title="Expand Player"
+          >
+            <Maximize2 className="w-3.5 h-3.5" />
+          </button>
+          <button 
+            onClick={onClose}
+            className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors"
+            title="Close"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      </div>
+      <div className="flex-1 w-full h-full bg-black relative flex items-center justify-center">
+        {isYouTube ? (
+          <iframe
+            className="w-full h-full border-0 pointer-events-none"
+            src={getYouTubeEmbedUrl(channel.streamUrl || '')}
+            title={channel.name}
+          />
+        ) : (
+          <video
+            ref={videoRef}
+            className="w-full h-full object-contain cursor-pointer"
+            onClick={onExpand}
+            playsInline
+            autoPlay
+            muted
+          />
+        )}
+      </div>
+    </motion.div>
+  );
+};
+
+const PlayerView = ({ channel, onBack, onSelectChannel, onMinimizeToPip, t, allChannels, adsConfig, isRtl, proxyConfig }: { channel: Channel, onBack: () => void, onSelectChannel: (c: Channel) => void, onMinimizeToPip: (c: Channel) => void, t: any, allChannels: Channel[], adsConfig: any, isRtl: boolean, proxyConfig: { proxyType: 'local' | 'cloudflare'; cloudflareWorkerUrl: string } }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [error, setError] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -463,7 +549,6 @@ const PlayerView = ({ channel, onBack, onSelectChannel, t, allChannels, adsConfi
   const [tvFocusedChId, setTvFocusedChId] = useState<string | null>(channel.id);
   const [isPaused, setIsPaused] = useState(false);
   const [channelInputNumber, setChannelInputNumber] = useState<string>('');
-  
   const isYouTube = channel.streamUrl?.includes('youtube.com') || channel.streamUrl?.includes('youtu.be');
 
   const resolvedStreamUrl = useMemo(() => {
@@ -636,14 +721,16 @@ const PlayerView = ({ channel, onBack, onSelectChannel, t, allChannels, adsConfi
       try {
         await (video as any).remote.prompt();
       } catch (err: any) {
-        if (err.name !== 'NotAllowedError' && !err.message?.includes('dismissed')) {
-          console.error('Remote playback prompt failed', err);
-        }
+        // Silently handle invalid state or dismissed prompts
       }
     } else if ((video as any).webkitShowPlaybackTargetPicker) {
-      (video as any).webkitShowPlaybackTargetPicker();
+      try {
+        (video as any).webkitShowPlaybackTargetPicker();
+      } catch (err: any) {}
     }
   };
+
+
 
   useEffect(() => {
     if (isYouTube) return;
@@ -681,8 +768,8 @@ const PlayerView = ({ channel, onBack, onSelectChannel, t, allChannels, adsConfi
                    hls?.recoverMediaError();
                    break;
                 default:
-                   setError("noStream");
                    hls?.destroy();
+                   setError("playbackError");
                    break;
               }
             }
@@ -692,6 +779,7 @@ const PlayerView = ({ channel, onBack, onSelectChannel, t, allChannels, adsConfi
           video.addEventListener('loadedmetadata', () => {
             video.play().catch(() => {});
           });
+          video.onerror = () => setError("playbackError");
         }
       } else {
         video.src = resolvedStreamUrl;
@@ -733,7 +821,32 @@ const PlayerView = ({ channel, onBack, onSelectChannel, t, allChannels, adsConfi
           </div>
           
           <div className="flex items-center gap-2">
-
+            <button 
+              onClick={() => {
+                const video = videoRef.current;
+                if (!video) return;
+                if (typeof (video as any).webkitShowPlaybackTargetPicker === 'function') {
+                  (video as any).webkitShowPlaybackTargetPicker();
+                } else {
+                  handleCast();
+                }
+              }}
+              className="p-2 rounded-full hover:bg-white/5 transition-all focus:outline-none focus:ring-4 focus:ring-brand-accent focus:bg-white/10 outline-none flex items-center gap-1.5 px-3 bg-white/10 border border-white/15 text-white"
+              title={t.airPlayDevice}
+            >
+              <Tv className="w-4 h-4 text-brand-accent" />
+              <span className="text-xs font-bold hidden sm:inline">AirPlay</span>
+            </button>
+            <button 
+              onClick={() => {
+                if (onMinimizeToPip) onMinimizeToPip(channel);
+              }}
+              className="p-2 rounded-full hover:bg-white/5 transition-all focus:outline-none focus:ring-4 focus:ring-brand-accent focus:bg-white/10 outline-none flex items-center gap-1.5 px-3 bg-white/10 border border-white/15 text-white"
+              title={t.pip || 'Picture-in-Picture'}
+            >
+              <PictureInPicture2 className="w-4 h-4 text-brand-accent" />
+              <span className="text-xs font-bold hidden sm:inline">PiP</span>
+            </button>
             <button 
               onClick={handleCast}
               className={`p-2 rounded-full hover:bg-white/5 transition-all focus:outline-none focus:ring-4 focus:ring-brand-accent focus:bg-white/10 outline-none ${canCast ? 'opacity-100' : 'opacity-30 pointer-events-none'}`}
@@ -1117,6 +1230,23 @@ const PwaInstallModal = ({ isOpen, onClose, t, isIos, language }: { isOpen: bool
 
             {/* iOS installation via PWA is shown in the platform steps above */}
 
+            {selectedPlatform === 'ios' && (
+              <a
+                href="/amedi-tv.ipa"
+                download="amedi-tv.ipa"
+                className="py-3.5 w-full rounded-2xl bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs tracking-widest uppercase transition-all shadow-lg text-center flex items-center justify-center gap-2 active:scale-[0.98]"
+              >
+                <Download className="w-4 h-4 animate-bounce" />
+                {language === 'English' 
+                  ? 'Download iOS IPA' 
+                  : language === 'Arabic' 
+                    ? 'تحميل ملف IPA للأيفون' 
+                    : language === 'Badini'
+                      ? 'داگرتنا فایلی IPA'
+                      : 'دابەزاندنی فایلی IPA'}
+              </a>
+            )}
+
             {(selectedPlatform === 'android_pc' || selectedPlatform === 'tv') && (
               <a
                 href="/amedi-tv.apk"
@@ -1242,6 +1372,8 @@ const TRANSLATIONS = {
     networkOnline: 'Network Online',
     initializingServer: 'Initializing Server...',
     castDevice: 'Cast to device',
+    airPlay: 'AirPlay',
+    airPlayDevice: 'AirPlay to Apple TV',
     installApp: 'Install App',
     installAppDesc: 'Install Amedi TV app on your device for a fast and smooth experience.',
     installInstructions: 'To install this app on an iOS device (iPhone), tap the Share button in Safari, then select "Add to Home Screen".',
@@ -1341,6 +1473,8 @@ const TRANSLATIONS = {
     networkOnline: 'تۆڕ چالاکە',
     initializingServer: 'خەریکی ئامادەکردنی سێرڤەر...',
     castDevice: 'ئاراستەکردن بۆ ئامێر',
+    airPlay: 'ئێرپڵەی',
+    airPlayDevice: 'بۆ ئامێری Apple TV',
     installApp: 'داگرتنی ئەپەکە',
     installAppDesc: 'ئەپی ئامێدی تیڤی دابەزێنە سەر ئامێرەکەت بۆ بینینێکی خێرا و گونجاو.',
     installInstructions: 'بۆ دابەزاندنی ئەم ئەپە لەسەر ئامێری iOS (ئایفۆن)، دوگمەی Share لە Safari دابگرە، پاشان "Add to Home Screen" هەڵبژێرە.',
@@ -1440,6 +1574,8 @@ const TRANSLATIONS = {
     networkOnline: 'تۆڕ یا چالاکە',
     initializingServer: 'ل هەمبەر ئامادەکرنا سێرڤەری...',
     castDevice: 'شاندن بۆ ئامێرێ دی',
+    airPlay: 'ئێرپڵەی',
+    airPlayDevice: 'بۆ Apple TV',
     installApp: 'داگرتنا ئەپی',
     installAppDesc: 'ئەپا ئامێدی تیڤی دابەزینە سەر ئامیرێ خۆ بۆ دیتنەکا بێ ئاریشە.',
     installInstructions: 'بۆ دابەزاندنا ڤی ئەپی ل سەر ئامیرێن iOS (ئایفۆن)، دوگمەیا Share ل سەر Safari دابگرە، پاشان "Add to Home Screen" هەلبژێره.',
@@ -1539,6 +1675,8 @@ const TRANSLATIONS = {
     networkOnline: 'الشبكة متصلة',
     initializingServer: 'جاري تهيئة الخادم...',
     castDevice: 'بث إلى جهاز',
+    airPlay: 'إيربلاي',
+    airPlayDevice: 'البث عبر AirPlay',
     installApp: 'تثبيت التطبيق',
     installAppDesc: 'قم بتثبيت تطبيق أميدي تي في على جهازك للاستمتاع ببث سريع ومستقر.',
     installInstructions: 'لتثبيت التطبيق على جهاز iOS (آيفون)، اضغط على زر المشاركة في Safari ثم اختر "إضافة إلى الشاشة الرئيسية".',
@@ -2685,10 +2823,29 @@ export default function App() {
   const [moviesModalOpen, setMoviesModalOpen] = useState(false);
   const [voicePanelOpen, setVoicePanelOpen] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
-  const [showInstallBtn, setShowInstallBtn] = useState(false);
+  const [showInstallBtn, setShowInstallBtn] = useState(true);
   const [installModalOpen, setInstallModalOpen] = useState(false);
+  const [addChannelModalOpen, setAddChannelModalOpen] = useState(false);
   const [isIos, setIsIos] = useState(false);
   const [isInstallBannerVisible, setIsInstallBannerVisible] = useState(false);
+
+  const getCustomChannels = (): Channel[] => {
+    try {
+      return JSON.parse(localStorage.getItem('amedi_custom_channels') || '[]');
+    } catch (e) {
+      return [];
+    }
+  };
+
+  const handleAddNewChannel = (newChannel: Channel) => {
+    setChannels(prev => [newChannel, ...prev]);
+    try {
+      const existing = getCustomChannels();
+      localStorage.setItem('amedi_custom_channels', JSON.stringify([newChannel, ...existing]));
+    } catch (e) {
+      console.warn("localStorage block:", e);
+    }
+  };
   
   const [liveAnnouncement, setLiveAnnouncement] = useState<{ title: string; desc: string; logo?: string } | null>(null);
 
@@ -2879,9 +3036,11 @@ export default function App() {
   }, [liveAnnouncement]);
 
   const [selectedChannel, setSelectedChannel] = useState<Channel | null>(null);
+  const [pipChannel, setPipChannel] = useState<Channel | null>(null);
 
   useEffect(() => {
     if (selectedChannel) {
+      setPipChannel(null);
       setIsMusicPlaying(false);
       const audio = document.getElementById('music-audio-element') as HTMLAudioElement;
       if (audio) {
@@ -3353,9 +3512,10 @@ export default function App() {
 
       try {
         const response = await fetch('/api/channels');
+        const custom = getCustomChannels();
         if (response.ok) {
           const data = await response.json();
-          setChannels(data.channels || CHANNELS);
+          setChannels([...custom, ...(data.channels || CHANNELS)]);
           setCategories(data.categories || CATEGORIES);
           if (data.version) {
             setCurrentVersion(data.version);
@@ -3370,7 +3530,8 @@ export default function App() {
         } else {
           console.warn('Failed to load channels from API:', error?.message || error);
         }
-        setChannels(CHANNELS);
+        const custom = getCustomChannels();
+        setChannels([...custom, ...CHANNELS]);
         setCategories(CATEGORIES);
       } finally {
         setLoading(false);
@@ -3392,9 +3553,10 @@ export default function App() {
     }
     try {
       const response = await fetch('/api/channels');
+      const custom = getCustomChannels();
       if (response.ok) {
         const data = await response.json();
-        setChannels(data.channels);
+        setChannels([...custom, ...(data.channels || CHANNELS)]);
         if (data.categories) {
           setCategories(data.categories);
         }
@@ -3535,6 +3697,15 @@ export default function App() {
               <span>{t.installApp}</span>
             </button>
           )}
+
+          <button
+            onClick={() => setAddChannelModalOpen(true)}
+            className={`px-3.5 py-2.5 text-[11px] md:text-xs font-black uppercase tracking-widest rounded-full bg-purple-600/20 hover:bg-purple-600/30 text-white border border-purple-500/30 flex flex-row items-center transition-all cursor-pointer shadow-lg shadow-purple-500/5 hover:scale-[1.03] active:scale-95 ${isRtl ? 'ml-2' : 'mr-2'}`}
+            title={t.addChannel}
+          >
+            <Plus className={`w-3.5 h-3.5 text-purple-400 ${isRtl ? 'ml-1.5' : 'mr-1.5'}`} />
+            <span className="hidden sm:inline">{t.addChannel || 'Add Link'}</span>
+          </button>
 
           <button 
             onClick={() => setInfoModalOpen(true)}
@@ -4063,10 +4234,23 @@ export default function App() {
             channel={selectedChannel} 
             onBack={() => setSelectedChannel(null)} 
             onSelectChannel={setSelectedChannel}
+            onMinimizeToPip={(ch) => setPipChannel(ch)}
             t={t}
             allChannels={channels}
             adsConfig={adsConfig}
             isRtl={isRtl}
+            proxyConfig={proxyConfig}
+          />
+        )}
+        {pipChannel && !selectedChannel && (
+          <MiniPlayer 
+            channel={pipChannel}
+            onExpand={() => {
+              setSelectedChannel(pipChannel);
+              setPipChannel(null);
+            }}
+            onClose={() => setPipChannel(null)}
+            t={t}
             proxyConfig={proxyConfig}
           />
         )}
@@ -4153,6 +4337,15 @@ export default function App() {
         t={t}
         isIos={isIos}
         language={language}
+      />
+
+      <AddChannelModal
+        isOpen={addChannelModalOpen}
+        onClose={() => setAddChannelModalOpen(false)}
+        onAddChannel={handleAddNewChannel}
+        t={t}
+        language={language}
+        isRtl={isRtl}
       />
 
 
