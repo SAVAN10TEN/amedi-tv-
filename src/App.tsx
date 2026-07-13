@@ -463,11 +463,35 @@ const MiniPlayer = ({ channel, onExpand, onClose, t, proxyConfig }: { channel: C
 
   const resolvedUrl = useMemo(() => {
     if (!channel.streamUrl) return '';
-    if (channel.streamUrl.startsWith('https://ameditv.kurdiish.workers.dev') || channel.streamUrl.startsWith('/') || channel.streamUrl.startsWith('http')) {
+    if (channel.streamUrl.startsWith('https://ameditv.kurdiish.workers.dev')) {
       return channel.streamUrl;
     }
+    if (channel.streamUrl.startsWith('/') || channel.streamUrl.startsWith('http://localhost') || channel.streamUrl.startsWith('https://localhost')) {
+      return channel.streamUrl;
+    }
+    if (proxyConfig && proxyConfig.proxyType === 'cloudflare') {
+      let workerUrl = proxyConfig.cloudflareWorkerUrl || 'https://ameditv.kurdiish.workers.dev';
+      if (workerUrl && !workerUrl.startsWith('http://') && !workerUrl.startsWith('https://')) {
+        workerUrl = 'https://' + workerUrl;
+      }
+      try {
+        const parsed = new URL(workerUrl);
+        if (parsed.pathname === '/' || parsed.pathname === '') {
+          workerUrl = parsed.origin + '/proxy';
+        }
+      } catch (e) {
+        if (!workerUrl.includes('/proxy') && !workerUrl.includes('?')) {
+          if (workerUrl.endsWith('/')) {
+            workerUrl = workerUrl.slice(0, -1);
+          }
+          workerUrl = workerUrl + '/proxy';
+        }
+      }
+      const delimiter = workerUrl.includes('?') ? '&' : '?';
+      return `${workerUrl}${delimiter}url=${encodeURIComponent(channel.streamUrl)}`;
+    }
     return `/api/proxy?url=${encodeURIComponent(channel.streamUrl)}`;
-  }, [channel.streamUrl]);
+  }, [channel.streamUrl, proxyConfig]);
 
   useEffect(() => {
     if (isYouTube) return;
