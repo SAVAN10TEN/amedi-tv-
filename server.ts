@@ -606,6 +606,78 @@ async function startServer() {
     res.json({ status: "ok" });
   });
 
+  // Xtream Codes API Login & Playlist Loader
+  app.post("/api/xtream-login", express.json(), async (req, res) => {
+    try {
+      let { serverUrl, username, password } = req.body;
+      if (!serverUrl || !username || !password) {
+        return res.status(400).json({ error: "Server URL, username, and password are required" });
+      }
+
+      serverUrl = serverUrl.trim();
+      if (!serverUrl.startsWith("http://") && !serverUrl.startsWith("https://")) {
+        serverUrl = "http://" + serverUrl;
+      }
+      serverUrl = serverUrl.replace(/\/+$/, "");
+
+      const apiUrl = `${serverUrl}/player_api.php?username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`;
+      
+      const authRes = await fetch(apiUrl);
+      if (!authRes.ok) {
+        return res.status(401).json({ error: "Failed to connect to Xtream Codes server" });
+      }
+
+      const authData = await authRes.json() as any;
+      if (!authData || !authData.user_info || authData.user_info.auth === 0) {
+        return res.status(401).json({ error: "Invalid Xtream Codes username or password" });
+      }
+
+      // Fetch live categories
+      const catRes = await fetch(`${apiUrl}&action=get_live_categories`);
+      let categories = [];
+      if (catRes.ok) {
+        categories = await catRes.json() as any[];
+      }
+
+      // Fetch live streams
+      const streamsRes = await fetch(`${apiUrl}&action=get_live_streams`);
+      let streams = [];
+      if (streamsRes.ok) {
+        streams = await streamsRes.json() as any[];
+      }
+
+      const categoryMap: Record<string, string> = {};
+      if (Array.isArray(categories)) {
+        categories.forEach((cat: any) => {
+          categoryMap[cat.category_id] = cat.category_name;
+        });
+      }
+
+      const channels = Array.isArray(streams) ? streams.map((stream: any) => {
+        const catName = categoryMap[stream.category_id] || 'Xtream Live';
+        return {
+          id: `xtream-${stream.stream_id}`,
+          name: stream.name || 'Xtream Channel',
+          streamUrl: `${serverUrl}/live/${username}/${password}/${stream.stream_id}.m3u8`,
+          logo: stream.stream_icon || 'https://images.unsplash.com/photo-1593784991095-a205069470b6?auto=format&fit=crop&q=80&w=200',
+          categories: [catName],
+          description: `Xtream Codes Live Stream (ID: ${stream.stream_id})`
+        };
+      }) : [];
+
+      res.json({
+        success: true,
+        userInfo: authData.user_info,
+        serverInfo: authData.server_info,
+        channels,
+        categories: Object.values(categoryMap)
+      });
+    } catch (err: any) {
+      console.error("[Xtream Login Error]", err);
+      res.status(500).json({ error: err.message || "Internal server error connecting to Xtream server" });
+    }
+  });
+
   // Support APK Download
   app.get("/amedi-tv.apk", (req, res) => {
     const pathsToSearch = [
@@ -1345,7 +1417,9 @@ async function startServer() {
           urlObj.search.toLowerCase().includes(".m3u8") || 
           targetStreamUrl.toLowerCase().includes("playlist") || 
           targetStreamUrl.toLowerCase().includes("master") || 
-          targetStreamUrl.toLowerCase().includes("m3u8")
+          targetStreamUrl.toLowerCase().includes("m3u8") ||
+          targetStreamUrl.toLowerCase().includes("/live/") ||
+          targetStreamUrl.toLowerCase().includes("xtream")
         ) {
           console.log(`[Proxy Auto-Authorize] Dynamically authorized HLS/media url: ${hostname}`);
           isDomainAllowed = true;

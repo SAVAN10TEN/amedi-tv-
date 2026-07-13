@@ -9,6 +9,7 @@ import { SettingsModal } from './components/SettingsModal';
 import { VoiceAssistant } from './components/VoiceAssistant';
 import { MoviesModal } from './components/MoviesModal';
 import { AddChannelModal } from './components/AddChannelModal';
+import { XtreamModal } from './components/XtreamModal';
 
 // --- Subcomponents ---
 
@@ -421,7 +422,7 @@ const isHlsUrl = (url: string) => {
   // Explicit HLS indicators
   if (lowerUrl.includes('.m3u8')) return true;
   if (lowerUrl.includes('.smil')) return true;
-  if (lowerUrl.includes('/hls/')) return true;
+  if (lowerUrl.includes('/hls/') || lowerUrl.includes('/live/') || lowerUrl.includes('xtream')) return true;
   if (lowerUrl.includes('playlist')) return true;
   if (lowerUrl.includes('master')) return true;
   if (lowerUrl.includes('chunks.m3u8')) return true;
@@ -2846,6 +2847,24 @@ export default function App() {
       console.warn("localStorage block:", e);
     }
   };
+
+  const [xtreamModalOpen, setXtreamModalOpen] = useState(false);
+
+  const handleImportXtreamChannels = (newChannels: Channel[], newCats: string[]) => {
+    setChannels(prev => {
+      const filtered = prev.filter(c => !c.id.startsWith('xtream-'));
+      return [...newChannels, ...filtered];
+    });
+    if (newCats && newCats.length > 0) {
+      setCategories(prev => {
+        const set = new Set([...prev, ...newCats.map(c => c as Category)]);
+        return Array.from(set);
+      });
+      setCategory(newCats[0] as Category);
+    }
+    setActiveTab('tv');
+    setSelectedChannel(null);
+  };
   
   const [liveAnnouncement, setLiveAnnouncement] = useState<{ title: string; desc: string; logo?: string } | null>(null);
 
@@ -3707,6 +3726,15 @@ export default function App() {
             <span className="hidden sm:inline">{t.addChannel || 'Add Link'}</span>
           </button>
 
+          <button
+            onClick={() => setXtreamModalOpen(true)}
+            className={`px-3.5 py-2.5 text-[11px] md:text-xs font-black uppercase tracking-widest rounded-full bg-orange-500/20 hover:bg-orange-500/30 text-white border border-orange-500/30 flex flex-row items-center transition-all cursor-pointer shadow-lg shadow-orange-500/5 hover:scale-[1.03] active:scale-95 ${isRtl ? 'ml-2' : 'mr-2'}`}
+            title="Xtream Codes API"
+          >
+            <Tv className={`w-3.5 h-3.5 text-orange-400 ${isRtl ? 'ml-1.5' : 'mr-1.5'}`} />
+            <span className="hidden sm:inline">Xtream</span>
+          </button>
+
           <button 
             onClick={() => setInfoModalOpen(true)}
             className={`p-3 rounded-full transition-all focus:outline-none focus:ring-4 focus:ring-brand-accent outline-none flex items-center justify-center shrink-0 ${tvMode && tvFocusZone === 'info' && tvFocusIndex === 1 ? 'ring-4 ring-purple-600 bg-brand-accent text-white scale-105' : 'bg-white/5 text-white/40 hover:text-white'}`}
@@ -4343,6 +4371,15 @@ export default function App() {
         isOpen={addChannelModalOpen}
         onClose={() => setAddChannelModalOpen(false)}
         onAddChannel={handleAddNewChannel}
+        t={t}
+        language={language}
+        isRtl={isRtl}
+      />
+
+      <XtreamModal
+        isOpen={xtreamModalOpen}
+        onClose={() => setXtreamModalOpen(false)}
+        onImportChannels={handleImportXtreamChannels}
         t={t}
         language={language}
         isRtl={isRtl}
