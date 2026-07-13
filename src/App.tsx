@@ -2739,7 +2739,7 @@ export default function App() {
   };
 
   const [proxyConfig, setProxyConfig] = useState<{ proxyType: 'local' | 'cloudflare'; cloudflareWorkerUrl: string }>({
-    proxyType: 'local',
+    proxyType: 'cloudflare',
     cloudflareWorkerUrl: 'https://ameditv.kurdiish.workers.dev'
   });
 

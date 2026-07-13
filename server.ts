@@ -72,7 +72,7 @@ let activationConfig = {
 // Load and manage Proxy configuration persistently
 const proxyConfigPath = path.join(process.cwd(), "proxy_config.json");
 let proxyConfig = {
-  proxyType: "local", // "local" or "cloudflare"
+  proxyType: "cloudflare", // "local" or "cloudflare"
   cloudflareWorkerUrl: "https://ameditv.kurdiish.workers.dev"
 };
 
