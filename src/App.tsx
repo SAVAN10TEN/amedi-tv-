@@ -3741,23 +3741,7 @@ export default function App() {
             </button>
           )}
 
-          <button
-            onClick={() => setAddChannelModalOpen(true)}
-            className={`px-3.5 py-2.5 text-[11px] md:text-xs font-black uppercase tracking-widest rounded-full bg-purple-600/20 hover:bg-purple-600/30 text-white border border-purple-500/30 flex flex-row items-center transition-all cursor-pointer shadow-lg shadow-purple-500/5 hover:scale-[1.03] active:scale-95 ${isRtl ? 'ml-2' : 'mr-2'}`}
-            title={t.addChannel}
-          >
-            <Plus className={`w-3.5 h-3.5 text-purple-400 ${isRtl ? 'ml-1.5' : 'mr-1.5'}`} />
-            <span className="hidden sm:inline">{t.addChannel || 'Add Link'}</span>
-          </button>
 
-          <button
-            onClick={() => setXtreamModalOpen(true)}
-            className={`px-3.5 py-2.5 text-[11px] md:text-xs font-black uppercase tracking-widest rounded-full bg-orange-500/20 hover:bg-orange-500/30 text-white border border-orange-500/30 flex flex-row items-center transition-all cursor-pointer shadow-lg shadow-orange-500/5 hover:scale-[1.03] active:scale-95 ${isRtl ? 'ml-2' : 'mr-2'}`}
-            title="Xtream Codes API"
-          >
-            <Tv className={`w-3.5 h-3.5 text-orange-400 ${isRtl ? 'ml-1.5' : 'mr-1.5'}`} />
-            <span className="hidden sm:inline">Xtream</span>
-          </button>
 
           <button 
             onClick={() => setInfoModalOpen(true)}
@@ -4391,23 +4375,7 @@ export default function App() {
         language={language}
       />
 
-      <AddChannelModal
-        isOpen={addChannelModalOpen}
-        onClose={() => setAddChannelModalOpen(false)}
-        onAddChannel={handleAddNewChannel}
-        t={t}
-        language={language}
-        isRtl={isRtl}
-      />
 
-      <XtreamModal
-        isOpen={xtreamModalOpen}
-        onClose={() => setXtreamModalOpen(false)}
-        onImportChannels={handleImportXtreamChannels}
-        t={t}
-        language={language}
-        isRtl={isRtl}
-      />
 
 
       {/* App Code/Website Version Update Notification Banner */}
