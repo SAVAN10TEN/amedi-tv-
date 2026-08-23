@@ -1,0 +1,13 @@
+Role: You are an expert mobile developer and CI/CD automation engineer.
+Task: Write a complete GitHub Actions workflow file (.github/workflows/build-apk.yml) and step-by-step instructions to automatically convert my web application into an Android APK file.
+
+Project Context:
+- Project Type: Web Application (HTML, CSS, JavaScript, React, or Vite).
+- Hosting: The web app is already hosted online.
+- Goal: Create a lightweight Android wrapper (such as Trusted Web Activity, Bubblewrap, or Capacitor/Cordova) that loads my live website URL and packages it into a signed Android APK.
+
+Please provide:
+1. The exact directory structure needed in my GitHub repository.
+2. The full YAML configuration code for GitHub Actions that automatically builds the APK whenever I push changes or manually trigger a build (using tools like Bubblewrap or Capacitor).
+3. Clear instructions on how to download the generated APK from the GitHub Actions "Artifacts" tab.
+4. How to handle app icon, app name, and permissions.
